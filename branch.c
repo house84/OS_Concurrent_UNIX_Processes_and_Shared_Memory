@@ -4,7 +4,9 @@
 
 int main(int argc, char * argv[]) {
 
-//	printf("Branch\n");  
+//Testing Output using Fork and execl 
+
+	printf("%s: %s\n", argv[0], argv[1]); 
 
 	return EXIT_SUCCESS; 
 }

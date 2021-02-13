@@ -6,7 +6,7 @@ master: master.o
 branch: branch.o
 	gcc branch.o -o branch
 
-master.o: master.c
+master.o: master.c master.h 
 	gcc -c master.c
 
 branch.o: branch.c
