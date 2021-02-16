@@ -10,4 +10,5 @@ struct sharedMemory {
 	int datanumber; 
 };
 
+
 #endif
