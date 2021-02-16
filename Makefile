@@ -1,7 +1,7 @@
 all: master branch
 
 master: master.o
-	gcc master.o -o master
+	gcc master.o -o master -lm
 
 branch: branch.o
 	gcc branch.o -o branch

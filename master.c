@@ -9,26 +9,31 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <limits.h>
-#include <errno.h> 
+#include <errno.h>
+#include <math.h>  
 #include "master.h"
 
-void help(); 		//Usage Info
-void bin_adder();	//Spawn Children
-void getData();		//Extract Data from file
-void setTimer(); 	//Set Timer
-int getTimer();   	//Get Timer
-struct itimerval timer; //Set Global Timer Struct
+void help(); 			//Usage Info
+void bin_adder();		//Spawn Children
+int validateData();		//Validate Data from file 
+void addData(); 		//Extract Data to Shared Memory
+void setTimer(); 		//Set Timer
+int getTimer();   		//Get Timer
+struct itimerval timer; 	//Set Global Timer Struct
+struct sharedMemory *shmptr; 	//Global Pointer Shared Memory
 
+int lines = 0; 			//Length of Datafile
+//int depth = 0; 			//Depth of Array
+//int leaves = 0; 		//Number of leaves for array
+int time = 100; 		//Default Time Out
+int children = 20; 		//Default Children
 
 int main(int argc, char * argv[]) {
 
 	//Testing stdout Program Name
 	printf("Master\n"); 
 	
-	//Set Variables and Defaults
 	int c = 0; 
-	int time = 100; 
-	int children = 20; 
 
 	//Handle Inputs with getopt()
 	while((c = getopt(argc, argv, "hi:t:")) != -1) {
@@ -93,7 +98,7 @@ int main(int argc, char * argv[]) {
 	//S_IWUSR = allow attach in write mode	
 	int shmid = shmget(key, sizeof(struct sharedMemory), IPC_CREAT | S_IRUSR | S_IWUSR); 
 	
-	struct sharedMemory *shmptr; 
+//Remove	struct sharedMemory *shmptr; 
 
 	//Check for error shmget()
 	if( shmid == -1 ){
@@ -105,9 +110,9 @@ int main(int argc, char * argv[]) {
 	shmptr = (struct sharedMemory *) shmat(shmid, NULL, 0);
 
 	
-	//===Parse DataFile for Input===//
-	getData(argv[file_index]); 
-
+	//===Parse DataFile for Input and Validate===//
+	lines = validateData(argv[file_index]); 
+	addData(argv[file_index]); 
 
 
 	//===Fork Child Processes===// 
@@ -116,13 +121,13 @@ int main(int argc, char * argv[]) {
 	//Testing Fork 
 	for( i = 0; i < children; ++i ){
 		
-	//	printf("Testing Fork Loop: %d\n", i); 
+//Remove	printf("Testing Fork Loop: %d\n", i); 
 
 		//Testing Fork
-		bin_adder(i, getTimer());
+		bin_adder(i, getTimer(), shmid);
 		
 		//Test Timer
-		sleep(1);  
+	//	sleep(1);  
 	} 
 
 	//Allow Children to Terminate
@@ -152,16 +157,17 @@ void help(char * program){
 	printf("\n%s -i x\t\t-> argument required for this option: x indicates the number of children allowed to exist (default 20)\n\n", program);  
 	printf("%s -t time\t-> argument required for this option: time in seconds after the process will terminate even if not finished.\n\n", program);
 	printf("%s datafile\t-> datafile required, this file must only contain integers, and only one integer per page. No blank lines.\n\n", program); 
+
 }
 
 
 //===Fork Child Processes===//
 
-void bin_adder(int n, int time){
+void bin_adder(int n, int time, int myshmid){
 
 	pid_t process_id = fork();
 	
-//	fprintf(stderr, "In forkit\n"); 	
+	fprintf(stderr, "In forkit\n"); 	
 	
 	//Check for error
 	if( process_id == -1 ) {
@@ -174,10 +180,14 @@ void bin_adder(int n, int time){
 		//Create string in buffer 
 		char buffer[10];
 		sprintf(buffer, "%d", n); 
+		
+	//	printf("In else\n"); 
 
 		//execl branch
-		execl("./branch", "Branch",  buffer, time, (char *) NULL); 
-
+		execl("./branch", "branch",  buffer, time, myshmid); // (char *) NULL); 
+		
+		printf("execl\n"); 
+	
 		//Exit Child Process
 		exit(EXIT_SUCCESS); 
 	}
@@ -185,11 +195,10 @@ void bin_adder(int n, int time){
 
 
 //===Set Timer===//
-//use setitimer()//
 
 void setTimer(int time){
 	
-//	struct itimerval timer;
+//Remove	struct itimerval timer;
 	timer.it_value.tv_sec = time;
 	timer.it_value.tv_usec = 0; 
 	timer.it_interval.tv_sec = 0; 
@@ -205,19 +214,21 @@ void setTimer(int time){
 
 
 //===Get Time===//
-//Use getitimer()//
+
 int getTimer(){
 	
 	int currTime = getitimer(ITIMER_REAL, &timer); 	
 	
-	printf("Timer: %d\n", timer.it_value.tv_sec); 
+//Remove  	//This is for testing
+//	printf("Timer: %d\n", timer.it_value.tv_sec); 
 
 	return timer.it_value.tv_sec;
 }
 
 
 //===Validate and Copy DataFile===//
-void getData(char * filename){
+
+int validateData(char * filename){
 	
 	//Get File Location
 	FILE * filepointer;
@@ -232,16 +243,17 @@ void getData(char * filename){
 
 	
 	//Get file Content
-	int lines = 0;
+	int mylines = 0;
 	int dataValue;
 	long value;  
 	char *myString, *endptr;   
 	char *data = NULL; 
 	size_t len = 50; 
-
+	
+	
 	while(getline(&data,&len, filepointer) != -1 ){
 		
-		lines++; 
+		mylines++; 
   	
 		myString = data; 	 
 		dataValue = atoi(data);
@@ -261,11 +273,8 @@ void getData(char * filename){
 		
 		//Store Data (dataValue) into Array of shared memory
 
-		printf("Line: %d = %d\n", lines, dataValue); 
+		printf("Line: %d = %d\n", mylines, dataValue); 
 	}
-
-	
-	
 
 
 	//===Close File and Free Memory===//
@@ -273,4 +282,81 @@ void getData(char * filename){
 	fclose(filepointer); 
 	
 	if(data){ free(data); }
+
+	return mylines; 
+}
+
+
+//===Allocate Space and Add to Shared Memory===//
+
+void addData(char * filename ){
+	
+	printf("In addData - File: %s\n", filename);
+
+	//===Set datanumber Array to appropriate Size===//
+	//calculate size of array
+	shmptr->depth = ceil(log2(lines));
+	shmptr->leaves = pow(2, shmptr->depth);  
+	int arrSize = shmptr->depth+1; 
+	//Test Expected outputs
+	printf("Depth = %d\tLeaves = %d\n",shmptr->depth, shmptr->leaves);  
+		
+	shmptr->datanumber = malloc(arrSize*shmptr->leaves*sizeof(int)); 	
+
+/*	
+ *	Rules for 2D Dynamic -> int *arr = malloc(rows*columns*sizeof(datatype));
+ * 	To access use -> arr[i*columns + j] in place of arr[i][j]
+ */	
+	
+	int i, j; 
+	
+	//set Values to zero
+	for(i = 0; i <= shmptr->depth; ++i ){
+		for(j = 0; j < shmptr->leaves; ++j){
+			shmptr->datanumber[i*shmptr->leaves + j] = 0; 
+		}
+	}	
+	
+	//===Add Validated file to Memory===// 
+	
+	//Open File
+	FILE * filepointer;
+        filepointer = fopen(filename, "r");
+
+	//Error Check 
+	if( filepointer == NULL) {
+
+                perror("Error whle opening file ");
+                exit(EXIT_FAILURE);
+        }
+
+
+	//Variables for extracting data
+	char *data = NULL;
+	size_t len = 50; 
+	int dataValue = 0;
+	int k = 0;  
+	
+	//Exctract int
+	while(getline(&data,&len, filepointer) != -1 ){
+	
+		dataValue = atoi(data);
+
+		//Test What will be added to array
+		printf("Iteration = %d\tData = %d\n", k, dataValue);
+
+		shmptr->datanumber[shmptr->depth*shmptr->leaves + k] = dataValue; 
+
+		//increment
+		++k;  
+	}
+
+		
+	//===Close Files and Free Memory===//
+	
+	fclose(filepointer); 
+	
+	if(data){ free(data); }
+		
+
 } 
