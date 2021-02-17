@@ -47,7 +47,7 @@ int main(int argc, char * argv[]) {
 			case 'i': //printf("%s option i\n", optarg); 
 				  children = atoi(optarg); 
 				  //Test Setting
-				  //printf("Children: %d\n", children); 
+				  printf("Children: %d\n", children); 
 				  break;
 	
 			case 't': //printf("%s option t\n", optarg); 
@@ -167,7 +167,7 @@ void bin_adder(int n, int time, int myshmid){
 
 	pid_t process_id = fork();
 	
-	fprintf(stderr, "In forkit\n"); 	
+//	fprintf(stderr, "In forkit\n"); 	
 	
 	//Check for error
 	if( process_id == -1 ) {
@@ -175,18 +175,28 @@ void bin_adder(int n, int time, int myshmid){
 		perror("Error: Fork \n");
 		exit(EXIT_FAILURE);  
 	}
-	else if( process_id == 0 ) {
+	if( process_id == 0 ) {
 	
 		//Create string in buffer 
-		char buffer[10];
-		sprintf(buffer, "%d", n); 
+		char buffer_1[10];
+		sprintf(buffer_1, "%d", n); 
 		
-	//	printf("In else\n"); 
+		char buffer_2[10];
+		sprintf(buffer_2, "%d", time); 
 
-		//execl branch
-		execl("./branch", "branch",  buffer, time, myshmid); // (char *) NULL); 
+		char buffer_3[50];
+		sprintf(buffer_3, "%d", myshmid); 
 		
-		printf("execl\n"); 
+		printf("In else\n"); 
+
+		//execl branch execl() takes null terminated strings as args
+		
+		
+		//execl("./branch", "branch", buffer, time, myshmid, (char *) NULL); 
+		if( execl("./branch", "branch", buffer_1, buffer_2, buffer_3, (char *) NULL) == -1) {
+			
+			perror("ERROR execl\n");
+		} 
 	
 		//Exit Child Process
 		exit(EXIT_SUCCESS); 
@@ -273,7 +283,7 @@ int validateData(char * filename){
 		
 		//Store Data (dataValue) into Array of shared memory
 
-		printf("Line: %d = %d\n", mylines, dataValue); 
+//		printf("Line: %d = %d\n", mylines, dataValue); 
 	}
 
 
@@ -291,7 +301,7 @@ int validateData(char * filename){
 
 void addData(char * filename ){
 	
-	printf("In addData - File: %s\n", filename);
+//	printf("In addData - File: %s\n", filename);
 
 	//===Set datanumber Array to appropriate Size===//
 	//calculate size of array
@@ -299,7 +309,7 @@ void addData(char * filename ){
 	shmptr->leaves = pow(2, shmptr->depth);  
 	int arrSize = shmptr->depth+1; 
 	//Test Expected outputs
-	printf("Depth = %d\tLeaves = %d\n",shmptr->depth, shmptr->leaves);  
+//	printf("Depth = %d\tLeaves = %d\n",shmptr->depth, shmptr->leaves);  
 		
 	shmptr->datanumber = malloc(arrSize*shmptr->leaves*sizeof(int)); 	
 
@@ -343,7 +353,7 @@ void addData(char * filename ){
 		dataValue = atoi(data);
 
 		//Test What will be added to array
-		printf("Iteration = %d\tData = %d\n", k, dataValue);
+//		printf("Iteration = %d\tData = %d\n", k, dataValue);
 
 		shmptr->datanumber[shmptr->depth*shmptr->leaves + k] = dataValue; 
 

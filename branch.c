@@ -13,11 +13,14 @@
 #include "master.h"
 
 
-int main(int argc, char * argv[]) {
+int main(int argc, char * argv[], char * envp[]) {
 
 //Testing Output using Fork and execl 
 
-	printf("Child -> %s: %s Time: %d\n", argv[0], argv[2], argv[1]); 
+	printf("Child -> %s: %s Time: %s shmid: %s\n", argv[0], argv[1], argv[2], argv[3]); 
+
+
+//	printf("Child Process\n"); 	
 
 	//Declare shmptr 
 	struct sharedMemory *shmptr; 
