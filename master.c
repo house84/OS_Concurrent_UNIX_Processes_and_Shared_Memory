@@ -10,29 +10,35 @@
 #include <sys/wait.h>
 #include <limits.h>
 #include <errno.h>
-#include <math.h>  
+#include <math.h> 
+#include <stdbool.h> 
 #include "master.h"
 
-void help(); 			//Usage Info
-void bin_adder();		//Spawn Children
-int validateData();		//Validate Data from file 
-void addData(); 		//Extract Data to Shared Memory
-void setTimer(); 		//Set Timer
-int getTimer();   		//Get Timer
-struct itimerval timer; 	//Set Global Timer Struct
-struct sharedMemory *shmptr; 	//Global Pointer Shared Memory
+static void help(); 			//Usage Info
+static void spawn_child();		//Spawn Children
+static int validateData();		//Validate Data from file 
+static void addData(); 			//Extract Data to Shared Memory
+static void setTimer(); 		//Set Timer
+static int getTimer();   		//Get Timer
+static void signalHandler(); 		//Signal Handler for termination of program
+static struct itimerval timer; 		//Set Global Timer Struct
+static struct sharedMemory *shmptr; 	//Global Pointer Shared Memory
 
-int lines = 0; 			//Length of Datafile
-//int depth = 0; 			//Depth of Array
-//int leaves = 0; 		//Number of leaves for array
-int time = 100; 		//Default Time Out
-int children = 20; 		//Default Children
+int lines = 0; 				//Length of Datafile n
+int time = 100; 			//Default Time Out
+int children = 20; 			//Default Max amount of Concurrent Children
+int totalProc = 0; 			//Set Total Processes as n/2
+int shmid = NULL; 			//Global shmid
+bool flag = false; 			//Flag to check Child Processes and Signal handling
 
 int main(int argc, char * argv[]) {
 
 	//Testing stdout Program Name
 	printf("Master\n"); 
 	
+	//initiate Signal Handling
+	signal(SIGINT, signalHandler); //CTRL+C
+
 	int c = 0; 
 
 	//Handle Inputs with getopt()
@@ -47,7 +53,7 @@ int main(int argc, char * argv[]) {
 			case 'i': //printf("%s option i\n", optarg); 
 				  children = atoi(optarg); 
 				  //Test Setting
-				  printf("Children: %d\n", children); 
+				  //printf("Children: %d\n", children); 
 				  break;
 	
 			case 't': //printf("%s option t\n", optarg); 
@@ -96,9 +102,7 @@ int main(int argc, char * argv[]) {
 	//IPC_CREAT = create new segment
 	//S_IRUSR = allow attach in read mode
 	//S_IWUSR = allow attach in write mode	
-	int shmid = shmget(key, sizeof(struct sharedMemory), IPC_CREAT | S_IRUSR | S_IWUSR); 
-	
-//Remove	struct sharedMemory *shmptr; 
+	shmid = shmget(key, sizeof(struct sharedMemory), IPC_CREAT | S_IRUSR | S_IWUSR);  
 
 	//Check for error shmget()
 	if( shmid == -1 ){
@@ -111,24 +115,70 @@ int main(int argc, char * argv[]) {
 
 	
 	//===Parse DataFile for Input and Validate===//
+	
+	//Validate DataFile format
 	lines = validateData(argv[file_index]); 
-	addData(argv[file_index]); 
+	
+	//Add Data to Array
+	addData(argv[file_index]);	
+
+	//Set total required Processes = N-1
+	if( lines % 2 == 0 ){
+		totalProc = lines -1; 
+	}else{
+		totalProc = lines; 
+	} 
 
 
 	//===Fork Child Processes===// 
+	// Create Child Processes not to exceed children max limit. 
+	// Outter Loop handle levels of the tree
+	// inner Loop will process pairs for computation.  
 
-	int i; 
-	//Testing Fork 
-	for( i = 0; i < children; ++i ){
+	//totalProc -> total processes needed
+	//lines -> integer inputs in array
+	//currProc -> Amount of Processes Running
+	//summedProc -> Amount of processes run
+	
+//	int currProc = 0; 
+	int summedProc = 0; 
+	bool complete = false; 
+	
+	while( summedProc < totalProc && complete == false ){
 		
-//Remove	printf("Testing Fork Loop: %d\n", i); 
+		//Total All Proc
+		++summedProc;
+		//Track concurrent procedures
+		++shmptr->currProc; 
 
-		//Testing Fork
-		bin_adder(i, getTimer(), shmid);
+		//If all Procedures Assigned to Children Break
+		if(summedProc == totalProc) { complete = true; }  
 		
-		//Test Timer
-	//	sleep(1);  
-	} 
+		//Limit concurrent Child Processes to 20
+		while(shmptr->currProc == 20) {}
+
+		//Slow for testing
+		sleep(1); 	
+
+		//Spawn Child Process
+		spawn_child(summedProc, getTimer(), shmid); 
+		
+	}
+	
+	printf("Current Processes: %d\n", shmptr->currProc); 
+ 
+	
+//	int i; 
+//	//Testing Fork 
+//	for( i = 0; i < children; ++i ){
+		
+		//Spawn Child Process
+//		spawn_child(i, getTimer(), shmid);
+
+		//Test Sleep
+		//sleep(1);  
+//	} 
+
 
 	//Allow Children to Terminate
 	while( wait(NULL) > 0 ); 
@@ -163,11 +213,9 @@ void help(char * program){
 
 //===Fork Child Processes===//
 
-void bin_adder(int n, int time, int myshmid){
+static void spawn_child(int n, int time, int myshmid){
 
-	pid_t process_id = fork();
-	
-//	fprintf(stderr, "In forkit\n"); 	
+	pid_t process_id = fork(); 	
 	
 	//Check for error
 	if( process_id == -1 ) {
@@ -175,8 +223,25 @@ void bin_adder(int n, int time, int myshmid){
 		perror("Error: Fork \n");
 		exit(EXIT_FAILURE);  
 	}
+
 	if( process_id == 0 ) {
+		
+		//Block Signal Handler from Terminating
+		flag = true; 		
 	
+		//Set shmpgid if not set
+		if( n == 0 ){
+			shmptr->shmpgid = getpid(); 
+		}	
+
+		setpgid(0, shmptr->shmpgid); 
+				
+		flag = false; 
+		
+		//Prevent any further processes if Signal sent 
+		if( flag == true ){  return; } 
+
+
 		//Create string in buffer 
 		char buffer_1[10];
 		sprintf(buffer_1, "%d", n); 
@@ -186,14 +251,11 @@ void bin_adder(int n, int time, int myshmid){
 
 		char buffer_3[50];
 		sprintf(buffer_3, "%d", myshmid); 
-		
-		printf("In else\n"); 
 
-		//execl branch execl() takes null terminated strings as args
-		
-		
-		//execl("./branch", "branch", buffer, time, myshmid, (char *) NULL); 
-		if( execl("./branch", "branch", buffer_1, buffer_2, buffer_3, (char *) NULL) == -1) {
+		//Add Logic to Call with xx and yy: 
+
+		//Call bin_adder w/execl()
+		if( execl("./bin_adder", "bin_adder", buffer_1, buffer_2, buffer_3, (char *) NULL) == -1) {
 			
 			perror("ERROR execl\n");
 		} 
@@ -206,9 +268,10 @@ void bin_adder(int n, int time, int myshmid){
 
 //===Set Timer===//
 
-void setTimer(int time){
+static void setTimer(int time) {
+
+	signal(SIGALRM, signalHandler); 
 	
-//Remove	struct itimerval timer;
 	timer.it_value.tv_sec = time;
 	timer.it_value.tv_usec = 0; 
 	timer.it_interval.tv_sec = 0; 
@@ -223,22 +286,76 @@ void setTimer(int time){
 }	
 
 
-//===Get Time===//
+//===Get Time Passed===//
 
-int getTimer(){
+static int getTimer(){
 	
 	int currTime = getitimer(ITIMER_REAL, &timer); 	
 	
-//Remove  	//This is for testing
-//	printf("Timer: %d\n", timer.it_value.tv_sec); 
+	return time-timer.it_value.tv_sec;
+}
 
-	return timer.it_value.tv_sec;
+
+//===Signal Handler===//
+static void signalHandler(int sig){
+
+	printf("\nSignal Handler\n"); 	
+
+	//Check flag and Delay for any new process
+	sleep(1); 
+	
+	//Block out new processes from starting
+	flag = true;
+
+	//Send Kill for CTR+C 
+	if( sig == SIGINT ){
+		
+		//Program Terminate Message
+		fprintf(stderr, "Program Ended\n"); 	
+
+		//CTRL+C	
+		if(killpg(shmptr->shmpgid,SIGTERM) == -1 ){
+		
+			perror("killpg SIGTERM");
+			exit(EXIT_FAILURE); 
+		}
+		
+		fprintf(stderr, "After killpg\n");  
+	}
+	//Send kill for Timer 
+	else if( sig == SIGALRM ){
+		
+		//Timer
+		if(killpg(shmptr->shmpgid, SIGUSR1) == -1){
+		
+			perror("killpg SIGUSR1"); 
+			exit(EXIT_FAILURE);
+		}
+	}
+	
+	printf("Sig Handler shmid: %d\n", shmid);	
+
+	//Allow child processes to end
+	while(wait(NULL) > 0); 
+
+	//Test
+	printf("Sig Handler shmid: %d\n", shmid);
+
+	//===Detatch Shared Memory===//
+	shmdt( shmptr );
+	shmctl(shmid, IPC_RMID, NULL); 
+		
+
+	//Testing
+	printf("Sig Handler shmid: %d\n", shmid); 
+
+	exit(EXIT_SUCCESS); 
 }
 
 
 //===Validate and Copy DataFile===//
 
-int validateData(char * filename){
+static int validateData(char * filename){
 	
 	//Get File Location
 	FILE * filepointer;
@@ -279,11 +396,7 @@ int validateData(char * filename){
 			fprintf(stderr, "Error: Datafile Contains Non-Integer\n"); 
 			exit(EXIT_FAILURE); 
 		} 
-		
-		
-		//Store Data (dataValue) into Array of shared memory
 
-//		printf("Line: %d = %d\n", mylines, dataValue); 
 	}
 
 
@@ -299,34 +412,19 @@ int validateData(char * filename){
 
 //===Allocate Space and Add to Shared Memory===//
 
-void addData(char * filename ){
+static void addData(char * filename ){
 	
-//	printf("In addData - File: %s\n", filename);
-
 	//===Set datanumber Array to appropriate Size===//
-	//calculate size of array
+	
+	//calculate Depth and Length of array
 	shmptr->depth = ceil(log2(lines));
 	shmptr->leaves = pow(2, shmptr->depth);  
-	int arrSize = shmptr->depth+1; 
-	//Test Expected outputs
-//	printf("Depth = %d\tLeaves = %d\n",shmptr->depth, shmptr->leaves);  
-		
-	shmptr->datanumber = malloc(arrSize*shmptr->leaves*sizeof(int)); 	
+	
+	int arrLength = shmptr->leaves+1;
 
-/*	
- *	Rules for 2D Dynamic -> int *arr = malloc(rows*columns*sizeof(datatype));
- * 	To access use -> arr[i*columns + j] in place of arr[i][j]
- */	
-	
-	int i, j; 
-	
-	//set Values to zero
-	for(i = 0; i <= shmptr->depth; ++i ){
-		for(j = 0; j < shmptr->leaves; ++j){
-			shmptr->datanumber[i*shmptr->leaves + j] = 0; 
-		}
-	}	
-	
+	//Create 1D array allocate memory for datanumber
+	shmptr->dataArr = (int *) malloc((arrLength)* sizeof(int));  
+
 	//===Add Validated file to Memory===// 
 	
 	//Open File
@@ -352,21 +450,25 @@ void addData(char * filename ){
 	
 		dataValue = atoi(data);
 
-		//Test What will be added to array
-//		printf("Iteration = %d\tData = %d\n", k, dataValue);
-
-		shmptr->datanumber[shmptr->depth*shmptr->leaves + k] = dataValue; 
-
+		//Add Data to Array
+		shmptr->dataArr[k] = dataValue; 
+	
 		//increment
 		++k;  
 	}
 
+	
+	//Test Array Allocated
+
+//	int i; 	
+//	for(i = 0; i < arrLength; ++i){
+//	
+//		printf("Value: %d\n", shmptr->dataArr[i]); 
+//	}
 		
 	//===Close Files and Free Memory===//
 	
 	fclose(filepointer); 
 	
 	if(data){ free(data); }
-		
-
 } 

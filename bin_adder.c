@@ -34,15 +34,22 @@ int main(int argc, char * argv[], char * envp[]) {
  *	Access -> arr[i*M + j] rather than arr[i][j] 
  */
 	//Test Shared Memory Access
-	int i, j; 
-	int rows = shmptr->depth + 1; 
-	int col = shmptr->leaves; 
-	for(i = 0; i < rows; ++i){
-		for(j = 0; j < col; ++j){
-			printf("%d\n", shmptr->datanumber[i*col + j]);
-		}
-	} 
+	int i;  
+	int arrLength = shmptr->leaves+1; 
+	
+	shmptr->leaves += 1; 
+		
+	printf("Array Length: %d\n", shmptr->leaves); 
 
+//	for(i = 0; i < arrLength; ++i){
+		
+//		printf("[%d] ", shmptr->datanumber[i]); 
+//	}
+
+	shmptr->currProc--; 
+	
+	//Test
+	printf("Child -> Concurrent Proc = %d\n", shmptr->currProc); 
 	
 	//Free pointer
 	shmdt( shmptr ); 

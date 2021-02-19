@@ -1,16 +1,16 @@
-all: master branch
+all: master bin_adder
 
 master: master.o
 	gcc master.o -o master -lm
 
-branch: branch.o
-	gcc branch.o -o branch -lm
+bin_adder: bin_adder.o
+	gcc bin_adder.o -o bin_adder -lm
 
 master.o: master.c master.h 
 	gcc -c master.c
 
-branch.o: branch.c
-	gcc -c branch.c
+bin_adder.o: bin_adder.c
+	gcc -c bin_adder.c
 
 clean:
-	rm *.o master branch
+	rm *.o master bin_adder

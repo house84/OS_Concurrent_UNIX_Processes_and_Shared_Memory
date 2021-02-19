@@ -9,9 +9,11 @@ struct sharedMemory {
 
 	enum state flags[20]; 
 	enum state turn; 
+	int shmpgid; 
 	int depth;
 	int leaves; 
-	int *datanumber;  
+	int *dataArr;  
+	int currProc; 
 };
 
 
