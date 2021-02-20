@@ -6,7 +6,7 @@ master: master.o
 bin_adder: bin_adder.o
 	gcc bin_adder.o -o bin_adder -lm
 
-master.o: master.c master.h 
+master.o: master.c shared.h 
 	gcc -c master.c
 
 bin_adder.o: bin_adder.c

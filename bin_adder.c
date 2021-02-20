@@ -10,49 +10,108 @@
 #include <sys/wait.h>
 #include <limits.h>
 #include <errno.h>
-#include "master.h"
+#include "shared.h"
 
+void process(); 		//Solution 4
+void critical_section();		//Critical Part to avoid race condition 
+struct sharedMemory *shmptr; 	//Global shared memory pointer
+int xx; 
+int yy; 
 
 int main(int argc, char * argv[], char * envp[]) {
 
 //Testing Output using Fork and execl 
 
-	printf("Child -> %s: %s Time: %s shmid: %s\n", argv[0], argv[1], argv[2], argv[3]); 
-
-
-	//Declare shmptr 
-	struct sharedMemory *shmptr; 
+	printf("Child -> %s: %s Time: %s shmid: %s\n", argv[0], argv[1], argv[2], argv[3]);  
 	
 	//Set shmptr from shmid
-	shmptr = (struct sharedMemory *) shmat(atoi(argv[3]), NULL, 0); 
+	shmptr = (struct sharedMemory *) shmat(atoi(argv[3]), NULL, 0);  
 	
 	//argv[1] xx
-	int xx = atoi(argv[1]); 
+	xx = atoi(argv[1]); 
 
 	//argv[2] yy
-	int yy = atoi(argv[2]); 
-/*
- *	Access 2D array datanumber
- *	Dynamically Allocate -> int *arr = malloc(Rows*Columns*sizeof(datatype));
- *	Access -> arr[i*M + j] rather than arr[i][j] 
- */
-	//Test Shared Memory Access
-	//shmptr->dataArr[xx] = yy; 
-	fprintf(stderr, "Array: %d\n", shmptr->dataArr[xx]); 
+	yy = atoi(argv[2]); 
+
+	//Call Solution 4
+	process(xx); 
 	
-//	int i;   
-//	for(i = 0; i < shmptr->leaves; ++i){
+	return EXIT_SUCCESS;
+}
+
+
+
+
+//===Multi Process Solution 4===//
+void process ( const int i ) {
+
+		int j; 		//Local to each process
+		int n; 		//Number of Processes Total
+		n = 19; 		
+
+		do {
+	
+			shmptr->flag[i] = want_in; 	//raise my flag
+			j = shmptr->turn; 			//set local variable
+				
+			while ( j != i ) 
+				j = ( shmptr->flag[j] != idle ) ? shmptr->turn : ( j + 1 ) % n; 
+
+			//Declare intention to enter critical section
+
+			shmptr->flag[i] = in_cs; 
+
+			//Check that no one else is in critical section 
+
+			for( j = 0; j < n; j++ )
+				if( ( j != i ) && ( shmptr->flag[j] == in_cs ))
+					break; 
+			
+		} while ( j < n || ( shmptr->turn != i && shmptr->flag[shmptr->turn] != idle )); 
+	 
 		
-//		printf("Arr [%d] ", shmptr->dataArr[i] ); 
-//	}
+	//Assign turn to self and enter critical section 
 
-	shmptr->currProc--; 
+	shmptr->turn = i; 
 	
-	//Test
-	printf("Child -> Concurrent Proc = %d\n", shmptr->currProc); 
+	//Enter Critical
+	fprintf(stderr, "Enter Critical %d\n", i); 
 	
-	//Free pointer
-//	shmdt( shmptr ); 
+	critical_section(); 
 
-	return EXIT_SUCCESS; 
+	//Exit Section
+	fprintf(stderr, "Exit Critical %d\n", i); 
+
+			
+	j = ( shmptr->turn + 1 ) % n; 
+
+	while ( shmptr->flag[j] == idle); 
+		j = ( j + 1 ) % n; 
+
+	//Assign turn to next waiting process; change flag to idle
+
+	shmptr->turn = j; 
+	shmptr->flag[i] = idle; 
+	 
+}
+
+		
+
+	
+//Exicute Algo
+void critical_section(){
+
+
+	int i;   
+	for(i = 0; i < shmptr->leaves; ++i){
+		
+		shmptr->dataArr[i] += 1; 
+
+		printf("[%d] ", shmptr->dataArr[i] ); 
+	}
+	printf("\n"); 	
+
+
+
+	shmptr->currProc--;
 }

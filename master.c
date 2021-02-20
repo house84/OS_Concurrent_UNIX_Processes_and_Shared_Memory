@@ -13,7 +13,7 @@
 #include <math.h> 
 #include <stdbool.h> 
 #include <signal.h>
-#include "master.h"
+#include "shared.h"
 
 static void help(); 			//Usage Info
 static void spawn_child();		//Spawn Children
@@ -32,11 +32,11 @@ int totalProc = 0; 			//Set Total Processes as n/2
 int shmid = NULL; 			//Global shmid
 pid_t  *pidArray; 			//Array for child pid
 bool flag = false; 			//Flag to check Child Processes and Signal handling
-bool sigFlag = false; 			//Flag to check if Signal has been called to terminate processes
-
+bool sigFlag = false; 			//Flag to check if Signal has been called to terminate processes 
 
 int main(int argc, char * argv[]) {
 
+	
 	//Testing stdout Program Name
 	printf("Master\n"); 
 	
@@ -76,6 +76,9 @@ int main(int argc, char * argv[]) {
 		}
 	}
 	
+ 
+
+
 	//Set Index for Filename
 	int file_index; 
 
@@ -95,6 +98,8 @@ int main(int argc, char * argv[]) {
 		exit(EXIT_FAILURE);
 	} 	
 	
+	//Validate User Input
+	lines = validateData(argv[file_index]);
 	
 	//==Start Timer===//
 	setTimer(time); 
@@ -104,7 +109,7 @@ int main(int argc, char * argv[]) {
 	key_t key = ftok("makefile", 'a'); 
 	
 	//Set shared memory id	
-	shmid = shmget(key, sizeof(struct sharedMemory), IPC_CREAT | S_IRUSR | S_IWUSR);  
+	shmid = shmget(key, sizeof(struct sharedMemory)+(lines*sizeof(int)), IPC_CREAT | S_IRUSR | S_IWUSR);  
 
 	//Check for error shmget()
 	if( shmid == -1 ){
@@ -119,18 +124,14 @@ int main(int argc, char * argv[]) {
 	//===Parse DataFile for Input and Validate===//
 	
 	//Validate DataFile format
-	lines = validateData(argv[file_index]); 
+	//	lines = validateData(argv[file_index]); 
 	shmptr->dataInputs = lines; 
 	
 	//Add Data to Array
 	addData(argv[file_index]);	
 
 	//Set total required Processes = N-1
-	if( lines % 2 == 0 ){
-		totalProc = lines -1; 
-	}else{
-		totalProc = lines; 
-	} 
+	totalProc = lines - 1; 
 
 	
 	//Allocate Memory for pidArray
@@ -162,12 +163,12 @@ int main(int argc, char * argv[]) {
 		//If all Procedures Assigned to Children Break
 		if(summedProc == totalProc) { 
 			complete = true;
-			break; 
+ 
   		}  
 		
 		//Limit concurrent Child Processes to 20
 		while(shmptr->currProc == 20) { 
-			
+				
 			wait(NULL); 
 		}
 
@@ -177,25 +178,27 @@ int main(int argc, char * argv[]) {
 		//Spawn Child Process
 		spawn_child((summedProc-1), getTimer(), shmid); 
 	
-			
+		//TEST
+		printf("Loop: %d\n", summedProc); 			
 	}
 	
-
-
+ 	//TEST
+	printf("FINISHED Loop: %d\n", summedProc);
+	
 	//Allow Children to Terminate
 	while( wait(NULL) > 0 ){} //printf("Wait\n"); } 
 	
 	
 	//Print Array
-	int z; 
+//	int z; 
  
-	for( z = 0 ; z < shmptr->leaves; ++z){
+//	for( z = 0 ; z < shmptr->leaves; ++z){
 		
-		printf("Loop: "); 
-		printf(" %d ", shmptr->dataArr[z]); 
-	}
+//		printf("Loop: "); 
+//		printf(" %d ", shmptr->dataArr[z]); 
+//	}
 	
-	printf("\n"); 
+//	printf("\n"); 
 
 	
 
@@ -234,7 +237,7 @@ void help(char * program){
 
 //===Fork Child Processes===//
 
-static void spawn_child(int n, int time, int myshmid){
+static void spawn_child(int n, int mytime, int myshmid){
 
 	
 	//Check for Signal Flag
@@ -266,7 +269,7 @@ static void spawn_child(int n, int time, int myshmid){
 		sprintf(buffer_1, "%d", n); 
 		
 		char buffer_2[10];
-		sprintf(buffer_2, "%d", time); 
+		sprintf(buffer_2, "%d", mytime); 
 
 		char buffer_3[50];
 		sprintf(buffer_3, "%d", myshmid); 
@@ -287,11 +290,11 @@ static void spawn_child(int n, int time, int myshmid){
 
 //===Set Timer===//
 
-static void setTimer(int time) {
+static void setTimer(int mytime) {
 
 	signal(SIGALRM, signalHandler); 
 	
-	timer.it_value.tv_sec = time;
+	timer.it_value.tv_sec = mytime;
 	timer.it_value.tv_usec = 0; 
 	timer.it_interval.tv_sec = 0; 
  	timer.it_interval.tv_usec = 0; 
@@ -422,7 +425,7 @@ static void addData(char * filename ){
 	int arrLength = shmptr->leaves+1;
 
 	//Create 1D array allocate memory for datanumber
-	shmptr->dataArr = (int *) malloc((arrLength)* sizeof(int));  
+	//shmptr->dataArr = malloc((arrLength)* sizeof(int));  
 
 	//===Add Validated file to Memory===// 
 	
