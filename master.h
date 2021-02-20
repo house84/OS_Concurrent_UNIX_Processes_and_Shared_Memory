@@ -9,7 +9,7 @@ struct sharedMemory {
 
 	enum state flags[20]; 
 	enum state turn; 
-	int shmpgid; 
+	int dataInputs;  
 	int depth;
 	int leaves; 
 	int *dataArr;  

@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <math.h> 
 #include <stdbool.h> 
+#include <signal.h>
 #include "master.h"
 
 static void help(); 			//Usage Info
@@ -29,7 +30,10 @@ int time = 100; 			//Default Time Out
 int children = 20; 			//Default Max amount of Concurrent Children
 int totalProc = 0; 			//Set Total Processes as n/2
 int shmid = NULL; 			//Global shmid
+pid_t  *pidArray; 			//Array for child pid
 bool flag = false; 			//Flag to check Child Processes and Signal handling
+bool sigFlag = false; 			//Flag to check if Signal has been called to terminate processes
+
 
 int main(int argc, char * argv[]) {
 
@@ -99,9 +103,7 @@ int main(int argc, char * argv[]) {
 	//generate unique key
 	key_t key = ftok("makefile", 'a'); 
 	
-	//IPC_CREAT = create new segment
-	//S_IRUSR = allow attach in read mode
-	//S_IWUSR = allow attach in write mode	
+	//Set shared memory id	
 	shmid = shmget(key, sizeof(struct sharedMemory), IPC_CREAT | S_IRUSR | S_IWUSR);  
 
 	//Check for error shmget()
@@ -118,6 +120,7 @@ int main(int argc, char * argv[]) {
 	
 	//Validate DataFile format
 	lines = validateData(argv[file_index]); 
+	shmptr->dataInputs = lines; 
 	
 	//Add Data to Array
 	addData(argv[file_index]);	
@@ -128,6 +131,10 @@ int main(int argc, char * argv[]) {
 	}else{
 		totalProc = lines; 
 	} 
+
+	
+	//Allocate Memory for pidArray
+	pidArray = (int *) malloc(totalProc*sizeof(int));  
 
 
 	//===Fork Child Processes===// 
@@ -148,41 +155,49 @@ int main(int argc, char * argv[]) {
 		
 		//Total All Proc
 		++summedProc;
+	
 		//Track concurrent procedures
 		++shmptr->currProc; 
 
 		//If all Procedures Assigned to Children Break
-		if(summedProc == totalProc) { complete = true; }  
+		if(summedProc == totalProc) { 
+			complete = true;
+			break; 
+  		}  
 		
 		//Limit concurrent Child Processes to 20
-		while(shmptr->currProc == 20) {}
+		while(shmptr->currProc == 20) { 
+			
+			wait(NULL); 
+		}
 
 		//Slow for testing
-		sleep(1); 	
+		//sleep(1); 
 
 		//Spawn Child Process
-		spawn_child(summedProc, getTimer(), shmid); 
-		
+		spawn_child((summedProc-1), getTimer(), shmid); 
+	
+			
 	}
 	
-	printf("Current Processes: %d\n", shmptr->currProc); 
- 
-	
-//	int i; 
-//	//Testing Fork 
-//	for( i = 0; i < children; ++i ){
-		
-		//Spawn Child Process
-//		spawn_child(i, getTimer(), shmid);
-
-		//Test Sleep
-		//sleep(1);  
-//	} 
 
 
 	//Allow Children to Terminate
-	while( wait(NULL) > 0 ); 
+	while( wait(NULL) > 0 ){} //printf("Wait\n"); } 
+	
+	
+	//Print Array
+	int z; 
+ 
+	for( z = 0 ; z < shmptr->leaves; ++z){
 		
+		printf("Loop: "); 
+		printf(" %d ", shmptr->dataArr[z]); 
+	}
+	
+	printf("\n"); 
+
+	
 
 	//===Detatch Shared Memory===//	
 
@@ -192,6 +207,12 @@ int main(int argc, char * argv[]) {
 	//Destroy shared memory
 	shmctl(shmid, IPC_RMID, NULL);
 
+	//Kill Child Processes
+//	int i; 
+//	for(i = 0; i < totalProc; ++i){
+		
+//		kill(pidArray[i], SIGKILL); 
+//	}
 
 	return EXIT_SUCCESS; 
 }
@@ -215,31 +236,29 @@ void help(char * program){
 
 static void spawn_child(int n, int time, int myshmid){
 
-	pid_t process_id = fork(); 	
 	
-	//Check for error
-	if( process_id == -1 ) {
+	//Check for Signal Flag
+	if( sigFlag == true ){  return; }	
+	
+	pid_t process_id; 
+
+	//Create New Child Process
+	if((process_id = fork()) < 0 ){ 
 		
 		perror("Error: Fork \n");
 		exit(EXIT_FAILURE);  
 	}
 
-	if( process_id == 0 ) {
-		
+	else if( process_id == 0 ){
+			
 		//Block Signal Handler from Terminating
 		flag = true; 		
 	
-		//Set shmpgid if not set
-		if( n == 0 ){
-			shmptr->shmpgid = getpid(); 
-		}	
+		//Add child id to array
+		pidArray[n-1] = process_id;  
 
-		setpgid(0, shmptr->shmpgid); 
-				
+		//Return Flag to false				
 		flag = false; 
-		
-		//Prevent any further processes if Signal sent 
-		if( flag == true ){  return; } 
 
 
 		//Create string in buffer 
@@ -299,56 +318,36 @@ static int getTimer(){
 //===Signal Handler===//
 static void signalHandler(int sig){
 
-	printf("\nSignal Handler\n"); 	
-
-	//Check flag and Delay for any new process
-	sleep(1); 
+	sigFlag = true; 
 	
-	//Block out new processes from starting
-	flag = true;
-
-	//Send Kill for CTR+C 
 	if( sig == SIGINT ){
-		
-		//Program Terminate Message
-		fprintf(stderr, "Program Ended\n"); 	
-
-		//CTRL+C	
-		if(killpg(shmptr->shmpgid,SIGTERM) == -1 ){
-		
-			perror("killpg SIGTERM");
-			exit(EXIT_FAILURE); 
-		}
-		
-		fprintf(stderr, "After killpg\n");  
+	
+		fprintf(stderr,"\nProgram Terminated by User\n");
 	}
-	//Send kill for Timer 
-	else if( sig == SIGALRM ){
+	else{
 		
-		//Timer
-		if(killpg(shmptr->shmpgid, SIGUSR1) == -1){
-		
-			perror("killpg SIGUSR1"); 
-			exit(EXIT_FAILURE);
-		}
+		fprintf(stderr, "\nProgram Terminateed due to Time\n");
+	}
+ 	
+	//Allow Current PID to finish
+	while(flag == true){
+	//	sleep(1);
 	}
 	
-	printf("Sig Handler shmid: %d\n", shmid);	
-
 	//Allow child processes to end
 	while(wait(NULL) > 0); 
 
-	//Test
-	printf("Sig Handler shmid: %d\n", shmid);
-
-	//===Detatch Shared Memory===//
+	//===Detatch and Delete Shared Memory===//
 	shmdt( shmptr );
 	shmctl(shmid, IPC_RMID, NULL); 
 		
-
-	//Testing
-	printf("Sig Handler shmid: %d\n", shmid); 
-
+	//===Kill Child Processes===//
+	int i; 
+	for(i = 0; i < totalProc; ++i){
+	
+		kill(pidArray[i], SIGKILL); 
+	}
+	
 	exit(EXIT_SUCCESS); 
 }
 

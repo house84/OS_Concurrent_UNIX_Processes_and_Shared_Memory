@@ -20,30 +20,30 @@ int main(int argc, char * argv[], char * envp[]) {
 	printf("Child -> %s: %s Time: %s shmid: %s\n", argv[0], argv[1], argv[2], argv[3]); 
 
 
-//	printf("Child Process\n"); 	
-
 	//Declare shmptr 
 	struct sharedMemory *shmptr; 
 	
 	//Set shmptr from shmid
 	shmptr = (struct sharedMemory *) shmat(atoi(argv[3]), NULL, 0); 
+	
+	//argv[1] xx
+	int xx = atoi(argv[1]); 
 
+	//argv[2] yy
+	int yy = atoi(argv[2]); 
 /*
  *	Access 2D array datanumber
  *	Dynamically Allocate -> int *arr = malloc(Rows*Columns*sizeof(datatype));
  *	Access -> arr[i*M + j] rather than arr[i][j] 
  */
 	//Test Shared Memory Access
-	int i;  
-	int arrLength = shmptr->leaves+1; 
+	//shmptr->dataArr[xx] = yy; 
+	fprintf(stderr, "Array: %d\n", shmptr->dataArr[xx]); 
 	
-	shmptr->leaves += 1; 
+//	int i;   
+//	for(i = 0; i < shmptr->leaves; ++i){
 		
-	printf("Array Length: %d\n", shmptr->leaves); 
-
-//	for(i = 0; i < arrLength; ++i){
-		
-//		printf("[%d] ", shmptr->datanumber[i]); 
+//		printf("Arr [%d] ", shmptr->dataArr[i] ); 
 //	}
 
 	shmptr->currProc--; 
@@ -52,7 +52,7 @@ int main(int argc, char * argv[], char * envp[]) {
 	printf("Child -> Concurrent Proc = %d\n", shmptr->currProc); 
 	
 	//Free pointer
-	shmdt( shmptr ); 
+//	shmdt( shmptr ); 
 
 	return EXIT_SUCCESS; 
 }
