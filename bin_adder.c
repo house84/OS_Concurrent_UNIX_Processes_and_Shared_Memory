@@ -10,14 +10,19 @@
 #include <sys/wait.h>
 #include <limits.h>
 #include <errno.h>
+#include <time.h> 
 #include "shared.h"
 
-void process(); 		//Solution 4
-void critical_section();		//Critical Part to avoid race condition 
+void process(); 							//Solution 4
+void critical_section();			//Critical Part to avoid race condition 
+void openLogFile(); 					//Open Logfile
+void closeLogFile(); 					//Close Logfile
 struct sharedMemory *shmptr; 	//Global shared memory pointer
-int xx; 
-int yy; 
-int procNum; 
+int xx; 											//Child Process Index, will be mod for array addition algo 
+int yy; 											//Depth for array addition algo 
+int indexNum; 								//Index for of flag[] 
+time_t curtime; 							//Initalize Value for Time
+FILE * filepointer; 					//Logfile Pointer
 
 int main(int argc, char * argv[], char * envp[]) {
 
@@ -28,8 +33,8 @@ int main(int argc, char * argv[], char * envp[]) {
 	//Set shmptr from shmid
 	shmptr = (struct sharedMemory *) shmat(atoi(argv[3]), NULL, 0);  
 	
-	//argv[1] procNum%20 
-	procNum = atoi(argv[1])%20;  
+	//argv[1] indexNum%20 
+	indexNum = atoi(argv[1])%20;  
 	
 	//argv[1] xx
 	xx = atoi(argv[1]); 
@@ -37,13 +42,9 @@ int main(int argc, char * argv[], char * envp[]) {
 	//argv[2] yy
 	yy = atoi(argv[2]); 
 
-	fprintf(stderr, "ProcNum: %d\n", procNum); 
 	//Call Solution 4
-	process(procNum); 
+	process(indexNum); 
 	
-	//Testing
-//	critical_section(); 
-
 	//release Memory Ptr
 	shmdt(shmptr); 
 	
@@ -61,7 +62,9 @@ void process ( const int i ) {
 
 		int j = NULL; 												//Local to each process
 		int n = 20; 													//Number of Processes
-		
+	
+		fprintf(stderr, "i: %d\n", i); 
+
 		//Ensure Current Index is not 
 		//being used by previous Process
 		while( shmptr->flag[i] != idle ){
@@ -125,19 +128,52 @@ void process ( const int i ) {
 	shmptr->flag[i] = idle; 
 }
 
-		
-
 	
 //Execute Algo in Critical Section
 void critical_section(){
 
-	int i;   
-	for(i = 0; i < shmptr->leaves; ++i){
-		
-		shmptr->dataArr[i] += 1; 
+	time(&curtime); 
+	
+	printf("CRITICAL SECTION\n"); 
 
-		printf("[%d] ", shmptr->dataArr[i] ); 
-	}
-	printf("\n"); 	
- 
+
+	openLogFile(); 
+
+	//Test Logfile Output
+	fprintf(stderr, "Index: %d  Depth: %d  Time: %s  PID: %ld\n", xx, yy, ctime(&curtime), getpid()); 
+
+	closeLogFile(); 
+
 }
+
+//	int i;   
+//	for(i = 0; i < shmptr->leaves; ++i){
+		
+//		shmptr->dataArr[i] += 1; 
+
+//		printf("[%d] ", shmptr->dataArr[i] ); 
+//	}
+//	printf("\n"); 	
+ 
+//}
+
+//Open/Create LogFile
+void openLogFile(){
+
+	filepointer = fopen("logfile", "a+"); 
+
+	//Error Checking
+	if( filepointer == NULL ){
+
+		perror("bin_adder: ERROR: Failed to open File "); 
+		exit(EXIT_FAILURE); 
+	} 
+}
+
+//Free File Pointer
+void closeLogFile(){
+
+	fclose(filepointer); 
+
+}
+

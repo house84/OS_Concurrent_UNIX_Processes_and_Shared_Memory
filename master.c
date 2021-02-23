@@ -122,7 +122,7 @@ int main(int argc, char * argv[]) {
 	//===Allocate Shared Memory===//	
 	
 	//generate unique key
-	key_t key = ftok("makefile", 'a');
+	key_t key = ftok("Makefile", 'a');
 
 	//Create Dynamic Memory Size dependent on datafile Size
 	size_t memSize = sizeof(struct sharedMemory) + (lines*sizeof(int)); // + (lines*sizeof(enum state)); 
@@ -134,8 +134,8 @@ int main(int argc, char * argv[]) {
 	if( shmid == -1 ){
 		perror("Master: Error: shmget ");
 		exit(EXIT_FAILURE);
-	}
- 
+	} 
+	
 	//attatch memory segmet with id
 	shmptr = (struct sharedMemory *) shmat(shmid, NULL, 0);
 
@@ -414,14 +414,15 @@ static void addData(char * filename ){
 	
 	//Open File
 	FILE * filepointer;
-        filepointer = fopen(filename, "r");
+  filepointer = fopen(filename, "r");
 
 	//Error Check 
 	if( filepointer == NULL) {
 
-                perror("Master: Error: Failed to open file ");
-                exit(EXIT_FAILURE);
-        }
+    perror("Master: Error: Failed to open file ");
+  	exit(EXIT_FAILURE);
+  
+	}
 
 
 	//Variables for extracting data
@@ -446,5 +447,8 @@ static void addData(char * filename ){
 	
 	fclose(filepointer); 
 	
-	if(data){ free(data); }
+	if(data){ 
+		
+		free(data); 
+	}
 } 

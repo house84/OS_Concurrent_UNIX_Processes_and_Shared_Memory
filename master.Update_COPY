@@ -16,7 +16,7 @@
 #include "shared.h"
 
 static void help(); 									//Usage Info
-static void spawn_child();						//Spawn Children
+static void spawn();									//Spawn Children
 static int validateData();						//Validate Data from file 
 static void addData(); 								//Extract Data to Shared Memory
 static void setTimer(); 							//Set Timer
@@ -35,10 +35,6 @@ bool flag = false; 										//Flag to check Child Processes and Signal handling
 bool sigFlag = false; 								//Flag to check if Signal has been called to terminate processes 
 
 int main(int argc, char * argv[]) {
-
-	
-	//Testing stdout Program Name
-	printf("Master\n"); 
 	
 	//initiate Signal Handling
 	signal(SIGINT, signalHandler); 
@@ -50,33 +46,42 @@ int main(int argc, char * argv[]) {
 	
 		switch(c) {
 			
-			case 'h': help(argv[0]);
+			//Usage Argument 
+			case 'h': 
+					
+					help(argv[0]);
 				  if(argc == 2) { exit(EXIT_SUCCESS);}
 				  break;  
-		
-			case 's': //printf("%s option i\n", optarg); 
-				  children = atoi(optarg); 
-				  //Test Setting
-				  //printf("Children: %d\n", children); 
-				  break;
-	
-			case 't': //printf("%s option t\n", optarg); 
-				  time = atoi(optarg); 
-				  //Test Setting
-				  //printf("Time: %d\n", time); 
-				  break; 
+			
+			//Number of Concurrent Child Process Arg
+			case 's': 
 
-			case ':': printf("Argument required\n"); 
+				  children = atoi(optarg); 
+				  break;
+			
+			//Set Timer Value 
+			case 't':
+
+				  time = atoi(optarg);  
+				  break; 
+			
+			//Pass Message When Arg Required
+			case ':': 
+					
+					fprintf(stderr, "Argument required\n"); 
 				  exit(EXIT_FAILURE); 
 				  break; 
 			
-			default:  //Invalid Args Exit
+			//Invalid Arg Message
+			default:  
+
 					fprintf(stderr, "Invalid Argument, see help page\n"); 
 				  exit(EXIT_FAILURE); 
 				 
 		}
 	}
 	
+
 
 	//Check for 0 Value inputs for Children or Time and Exit
 	if(children == 0 || time == 0 ) {
@@ -98,6 +103,7 @@ int main(int argc, char * argv[]) {
 		file_index = 1; 
 	}
 
+	
 	//Check for DataFile Argument 
 	if( optind == argc ) { 
 		
@@ -105,24 +111,24 @@ int main(int argc, char * argv[]) {
 		exit(EXIT_FAILURE);
 	} 	
 	
-	//Validate User Input
+
+	//Validate datafile content
 	lines = validateData(argv[file_index]);
 	
 	//==Start Timer===//
 	setTimer(time); 
 
+	
 	//===Allocate Shared Memory===//	
+	
 	//generate unique key
 	key_t key = ftok("makefile", 'a');
 
-	//Create Memory Size dependent of datafile Size
+	//Create Dynamic Memory Size dependent on datafile Size
 	size_t memSize = sizeof(struct sharedMemory) + (lines*sizeof(int)); // + (lines*sizeof(enum state)); 
-	printf("%lu\n", memSize); 
 
-	//Set shared memory id	
+	//Set Allocate shared memory for shmid	
 	shmid = shmget(key, sizeof(memSize), IPC_CREAT | S_IRUSR | S_IWUSR);  
-	
-//	shmid = shmget(key, sizeof(struct sharedMemory), IPC_CREAT | S_IRUSR | S_IWUSR);
 
 	//Check for error shmget()
 	if( shmid == -1 ){
@@ -130,7 +136,6 @@ int main(int argc, char * argv[]) {
 		exit(EXIT_FAILURE);
 	}
  
-
 	//attatch memory segmet with id
 	shmptr = (struct sharedMemory *) shmat(shmid, NULL, 0);
 
@@ -146,74 +151,45 @@ int main(int argc, char * argv[]) {
 	//Set total required Processes = N-1
 	totalProc = lines - 1; 
 	
-	//Allocate Memory for pidArray
+	//Allocate Memory for pidArray (Not Needed)
 	pidArray = (int *) malloc(totalProc*sizeof(int));  
 
 
-	//===Fork Child Processes===// 
-	// Create Child Processes not to exceed children max limit. 
-	// Outter Loop handle levels of the tree
-	// inner Loop will process pairs for computation.  
-
-	//totalProc -> total processes needed
-	//lines -> integer inputs in array
-	//currProc -> Amount of Processes Running
-	//summedProc -> Amount of processes run
+	//=== Spawn Child Processes ===//
 	
-//	int currProc = 0; 
 	int summedProc = 0; 
-	bool complete = false; 
-	shmptr->currProc = 0; 
 
-	while( summedProc < totalProc){// && complete == false ){
+	//Spawn Initial Group of Processes 
+	while( summedProc < children){
 		
 		//Total All Proc
 		++summedProc;
-	
-		//Track concurrent procedures
-		++shmptr->currProc; 
-
-		//If all Procedures Assigned to Children Break
-		if(summedProc == totalProc) { 
 		
-			fprintf(stderr, "Complete!!! \n"); 
-			complete = true;
- 
-  	}  
-		
-		fprintf(stderr, "Current Procedures: %d\n", shmptr->currProc); 
+		//Call Initial Child Processes
+		spawn((summedProc-1), getTimer(), shmid); 
 
-		//Limit concurrent Child Processes to 20
-		//while(shmptr->currProc == 20) { 
-		//while(	wait(NULL) > children ) { } 
-		
-		if( shmptr->currProc == children ){
-
-			wait(NULL); 
-		
-		}
-
-
-		//Spawn Child Process
-		spawn_child((summedProc-1), getTimer(), shmid); 
-	
-		//TEST
-		printf("Loop: %d\n", summedProc); 			
 	}
 	
- 	//TEST
-	printf("FINISHED Loop: %d\n", summedProc);
+	//Spawn Remaining Processes One at a Time Until Finished
+	while( summedProc <= totalProc ){
+
+			//Wait for One Process to end
+			wait(NULL); 
+		
+			//Increment Count to Next Process
+			++summedProc;
+		
+			//Call Next Child Process
+			spawn((summedProc - 1 ), getTimer(), shmid); 
+
+	}
+
+
+	//=== Allow Processes to Finish ===//
 	
 	//Allow Children to Terminate
-	while( wait(NULL) > 0 ){
+	while( wait(NULL) > 0){ } 
 
-		sleep(1);
-	
-	} 
-	
-
-
-	
 
 	//===Detatch Shared Memory===//	
 
@@ -223,12 +199,6 @@ int main(int argc, char * argv[]) {
 	//Destroy shared memory
 	shmctl(shmid, IPC_RMID, NULL);
 
-	//Kill Child Processes
-//	int i; 
-//	for(i = 0; i < totalProc; ++i){
-		
-//		kill(pidArray[i], SIGKILL); 
-//	}
 
 	return EXIT_SUCCESS; 
 }
@@ -250,12 +220,13 @@ void help(char * program){
 
 //===Fork Child Processes===//
 
-static void spawn_child(int n, int mytime, int myshmid){
+static void spawn(int n, int mytime, int myshmid){
 
 	
 	//Check for Signal Flag
 	if( sigFlag == true ){  return; }	
-	
+
+	//initialize Variable
 	pid_t process_id; 
 
 	//Create New Child Process
@@ -265,6 +236,7 @@ static void spawn_child(int n, int mytime, int myshmid){
 		exit(EXIT_FAILURE);  
 	}
 
+	//Ensure Child Process
 	else if( process_id == 0 ){
 			
 		//Block Signal Handler from Terminating
@@ -438,14 +410,11 @@ static void addData(char * filename ){
 	
 	int arrLength = shmptr->leaves+1;
 
-	//Create 1D array allocate memory for datanumber
-	//shmptr->dataArr = malloc((arrLength)* sizeof(int));  
-
 	//===Add Validated file to Memory===// 
 	
 	//Open File
 	FILE * filepointer;
-        filepointer = fopen(filename, "r");
+  filepointer = fopen(filename, "r");
 
 	//Error Check 
 	if( filepointer == NULL) {
@@ -472,15 +441,6 @@ static void addData(char * filename ){
 		//increment
 		++k;  
 	}
-
-	
-	//Test Array Allocated
-
-//	int i; 	
-//	for(i = 0; i < arrLength; ++i){
-//	
-//		printf("Value: %d\n", shmptr->dataArr[i]); 
-//	}
 		
 	//===Close Files and Free Memory===//
 	
