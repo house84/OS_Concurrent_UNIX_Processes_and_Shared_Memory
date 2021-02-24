@@ -28,7 +28,10 @@ static struct sharedMemory *shmptr; 	//Global Pointer Shared Memory
 int lines = 0; 												//Length of Datafile n
 int time = 100; 											//Default Time Out
 int children = 20; 										//Default Max amount of Concurrent Children
-int totalProc = 0; 										//Set Total Processes as n/2
+int totalProc = 0;										//Set Total Processes as n-1
+int xx = 0; 													//Index Number xx
+int yy = 0; 													//Depth yy
+int pidCount = 0; 										//Track child PID Count
 int shmid = NULL;											//Global shmid
 pid_t  *pidArray; 										//Array for child pid
 bool flag = false; 										//Flag to check Child Processes and Signal handling
@@ -148,7 +151,7 @@ int main(int argc, char * argv[]) {
 	//Add Data to Array
 	addData(argv[file_index]);	
 
-	//Set total required Processes = N-1
+	//Set total required Processes = n-1
 	totalProc = lines - 1; 
 	
 	//Allocate Memory for pidArray (Not Needed)
@@ -157,17 +160,35 @@ int main(int argc, char * argv[]) {
 
 	//=== Spawn Child Processes ===//
 	
-	int summedProc = 0; 
+	int summedProc = 0;
+	int level = 1; 
+
+	//Set Initial Depth
+	yy = shmptr->depth; 	
 
 	//Spawn Initial Group of Processes 
 	while( summedProc < children){
-		
-		//Total All Proc
-		++summedProc;
-		
-		//Call Initial Child Processes
-		spawn((summedProc-1), getTimer(), shmid); 
 
+		//Pass proper index (xx) to child based on level 
+		if( xx % (int)(pow(2, level)) == 0 ){
+		
+			//Total All Proc 
+			++summedProc;	
+		
+			//Call Initial Child Processes **Remove global shmid from call
+			spawn( xx, yy, shmid); 
+		}
+
+		//Increment xx
+		++xx; 
+
+		//Check if Depth (yy) needs to be decramented
+		if(( xx % (int)(pow(yy, 2)/2)) == totalProc){
+			
+			--yy; 
+			++level;
+
+		}
 	}
 	
 	//Spawn Remaining Processes One at a Time Until Finished
@@ -176,12 +197,27 @@ int main(int argc, char * argv[]) {
 			//Wait for One Process to end
 			wait(NULL); 
 		
-			//Increment Count to Next Process
-			++summedProc;
-		
-			//Call Next Child Process
-			spawn((summedProc - 1 ), getTimer(), shmid); 
+			//Check for proper index to pass to child
+			if( xx % (int)(pow(2, level)) == 0 ){
 
+				//Increment Count to Next Process
+				++summedProc;
+		
+				//Call Next Child Process
+				spawn( xx, yy, shmid); 
+
+			}
+
+			//Increment xx
+			++xx; 
+
+			//Check if depth needs to be decramented
+			if(( xx % (int)(pow(yy, 2)/2)) == totalProc){
+
+				--yy;
+				++level; 
+
+			}
 	}
 
 
@@ -220,7 +256,7 @@ void help(char * program){
 
 //===Fork Child Processes===//
 
-static void spawn(int n, int mytime, int myshmid){
+static void spawn(int x, int y, int myshmid){
 
 	
 	//Check for Signal Flag
@@ -243,28 +279,28 @@ static void spawn(int n, int mytime, int myshmid){
 		flag = true; 		
 	
 		//Add child id to array
-		pidArray[n-1] = process_id;  
+		pidArray[pidCount] = process_id;  
+		++pidCount; 
 
 		//Return Flag to false				
 		flag = false; 
 
-
 		//Create string in buffer 
-		char buffer_1[10];
-		sprintf(buffer_1, "%d", n); 
+		char buffer_x[10];
+		sprintf(buffer_x, "%d", x); 
 		
-		char buffer_2[10];
-		sprintf(buffer_2, "%d", mytime); 
+		char buffer_y[10];
+		sprintf(buffer_y, "%d", y); 
 
-		char buffer_3[50];
-		sprintf(buffer_3, "%d", myshmid); 
+		char buffer_shm[50];
+		sprintf(buffer_shm, "%d", myshmid); 
 
 		//Add Logic to Call with xx and yy: 
 
 		//Call bin_adder w/execl()
-		if( execl("./bin_adder", "bin_adder", buffer_1, buffer_2, buffer_3, (char *) NULL) == -1) {
+		if( execl("./bin_adder", "bin_adder", buffer_x, buffer_y, buffer_shm, (char *) NULL) == -1) {
 			
-			perror("Master: ERROR: execl failure ");
+			perror("Master: ERROR: execl() failure ");
 		} 
 	
 		//Exit Child Process
@@ -319,12 +355,10 @@ static void signalHandler(int sig){
 	}
  	
 	//Allow Current PID to finish
-	while(flag == true){
-	//	sleep(1);
-	}
+	while(flag == true){}
 	
 	//Allow child processes to end
-	while(wait(NULL) > 0); 
+	//while(wait(NULL) > 0); 
 
 	//===Detatch and Delete Shared Memory===//
 	shmdt( shmptr );
@@ -342,7 +376,6 @@ static void signalHandler(int sig){
 
 
 //===Validate and Copy DataFile===//
-
 static int validateData(char * filename){
 	
 	//Get File Location

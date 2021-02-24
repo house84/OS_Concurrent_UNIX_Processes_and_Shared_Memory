@@ -1,10 +1,23 @@
 Author: Nick House
-Project: Concurrent UNIX Processes and shared memory
-Course: CS-4760 Operating Systems
+Project: Concurrent UNIX Processes and Shared Memory
+Course: CS-4760 Operating Systems, Spring 2021
 Directory Name: house.2
-Included Files: +++++ add souce files....
-
+Included Files: master.c, bin_adder.c, shared.h, Makefile, README, numGen.sh, .git
+Files Generated: logfile
 
 What this program does: 
 
 	+++ Add Text......
+
+
+
+Included Random Number Generator -> numGen.sh:
+
+		This project includes a Bash file titles "numGen.sh". This file
+	will generate random length [64,100] containing 
+	a single random integer per line in the range [0,256). The integer
+	found on the first line will also be the length of the file. 
+
+	- To generate a random number file using numGen.sh, execute following:
+
+		$ bash numGen.sh > [datafile_name] 

@@ -28,7 +28,9 @@ static struct sharedMemory *shmptr; 	//Global Pointer Shared Memory
 int lines = 0; 												//Length of Datafile n
 int time = 100; 											//Default Time Out
 int children = 20; 										//Default Max amount of Concurrent Children
-int totalProc = 0; 										//Set Total Processes as n/2
+int totalProc = 0;										//Set Total Processes as n/2
+int xx = 0; 													//Index Number
+int yy = 0; 													//Depth 
 int shmid = NULL;											//Global shmid
 pid_t  *pidArray; 										//Array for child pid
 bool flag = false; 										//Flag to check Child Processes and Signal handling
@@ -122,7 +124,7 @@ int main(int argc, char * argv[]) {
 	//===Allocate Shared Memory===//	
 	
 	//generate unique key
-	key_t key = ftok("makefile", 'a');
+	key_t key = ftok("Makefile", 'a');
 
 	//Create Dynamic Memory Size dependent on datafile Size
 	size_t memSize = sizeof(struct sharedMemory) + (lines*sizeof(int)); // + (lines*sizeof(enum state)); 
@@ -134,8 +136,8 @@ int main(int argc, char * argv[]) {
 	if( shmid == -1 ){
 		perror("Master: Error: shmget ");
 		exit(EXIT_FAILURE);
-	}
- 
+	} 
+	
 	//attatch memory segmet with id
 	shmptr = (struct sharedMemory *) shmat(shmid, NULL, 0);
 
@@ -157,7 +159,10 @@ int main(int argc, char * argv[]) {
 
 	//=== Spawn Child Processes ===//
 	
-	int summedProc = 0; 
+	int summedProc = 0;
+
+	//Set Initial Depth
+	yy = shmptr->depth; 		
 
 	//Spawn Initial Group of Processes 
 	while( summedProc < children){
@@ -247,7 +252,6 @@ static void spawn(int n, int mytime, int myshmid){
 
 		//Return Flag to false				
 		flag = false; 
-
 
 		//Create string in buffer 
 		char buffer_1[10];
@@ -342,7 +346,6 @@ static void signalHandler(int sig){
 
 
 //===Validate and Copy DataFile===//
-
 static int validateData(char * filename){
 	
 	//Get File Location
@@ -419,9 +422,10 @@ static void addData(char * filename ){
 	//Error Check 
 	if( filepointer == NULL) {
 
-                perror("Master: Error: Failed to open file ");
-                exit(EXIT_FAILURE);
-        }
+    perror("Master: Error: Failed to open file ");
+  	exit(EXIT_FAILURE);
+  
+	}
 
 
 	//Variables for extracting data
@@ -446,5 +450,8 @@ static void addData(char * filename ){
 	
 	fclose(filepointer); 
 	
-	if(data){ free(data); }
+	if(data){ 
+		
+		free(data); 
+	}
 } 
