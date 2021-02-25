@@ -1,0 +1,176 @@
+
+
+//=======New Logfile Started =======//
+Time: Wed Feb 24 23:45:56 2021
+Max Children: 34  Timer(sec): 100  Datafile: test3
+
+
+Time: Wed Feb 24 23:45:57 2021
+PID: 10226    Index: 0    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:45:58 2021
+PID: 10227    Index: 2    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:45:59 2021
+PID: 10228    Index: 4    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:46:00 2021
+PID: 10229    Index: 6    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:46:01 2021
+PID: 10230    Index: 8    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:46:02 2021
+PID: 10231    Index: 10    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:46:03 2021
+PID: 10232    Index: 12    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:46:04 2021
+PID: 10233    Index: 14    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:46:05 2021
+PID: 10234    Index: 0    Depth: 3    Sum: 4
+
+Time: Wed Feb 24 23:46:06 2021
+PID: 10235    Index: 4    Depth: 3    Sum: 4
+
+Time: Wed Feb 24 23:46:07 2021
+PID: 10236    Index: 8    Depth: 3    Sum: 4
+
+Time: Wed Feb 24 23:46:08 2021
+PID: 10237    Index: 12    Depth: 3    Sum: 4
+
+Time: Wed Feb 24 23:46:09 2021
+PID: 10240    Index: 0    Depth: 1    Sum: 8
+
+Time: Wed Feb 24 23:46:10 2021
+PID: 10239    Index: 8    Depth: 2    Sum: 8
+
+Time: Wed Feb 24 23:46:11 2021
+PID: 10238    Index: 0    Depth: 2    Sum: 12
+
+//===Final Sum===//
+Date: Wed Feb 24 23:46:11 2021
+Index: 0  Depth: 0  Sum: 12
+//===== End Log Entry =====//
+
+
+//=======New Logfile Started =======//
+Time: Wed Feb 24 23:46:59 2021
+Max Children: 34  Timer(sec): 100  Datafile: test3
+
+
+Time: Wed Feb 24 23:47:00 2021
+PID: 10320    Index: 0    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:47:01 2021
+PID: 10321    Index: 2    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:47:02 2021
+PID: 10322    Index: 4    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:47:03 2021
+PID: 10323    Index: 6    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:47:04 2021
+PID: 10324    Index: 8    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:47:05 2021
+PID: 10325    Index: 10    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:47:06 2021
+PID: 10326    Index: 12    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:47:07 2021
+PID: 10327    Index: 14    Depth: 4    Sum: 2
+
+Time: Wed Feb 24 23:47:08 2021
+PID: 10332    Index: 0    Depth: 2    Sum: 4
+
+Time: Wed Feb 24 23:47:09 2021
+PID: 10329    Index: 4    Depth: 3    Sum: 4
+
+Time: Wed Feb 24 23:47:10 2021
+PID: 10330    Index: 8    Depth: 3    Sum: 4
+
+Time: Wed Feb 24 23:47:11 2021
+PID: 10331    Index: 12    Depth: 3    Sum: 4
+
+Time: Wed Feb 24 23:47:12 2021
+PID: 10328    Index: 0    Depth: 3    Sum: 6
+
+Time: Wed Feb 24 23:47:13 2021
+PID: 10333    Index: 8    Depth: 2    Sum: 8
+
+Time: Wed Feb 24 23:47:14 2021
+PID: 10334    Index: 0    Depth: 1    Sum: 14
+
+//===Final Sum===//
+Date: Wed Feb 24 23:47:14 2021
+Index: 0  Depth: 0  Sum: 14
+//===== End Log Entry =====//
+
+
+//=======New Logfile Started =======//
+Time: Wed Feb 24 23:47:36 2021
+Max Children: 2  Timer(sec): 100  Datafile: test2
+
+
+Time: Wed Feb 24 23:47:37 2021
+PID: 10389    Index: 0    Depth: 3    Sum: 2
+
+Time: Wed Feb 24 23:47:38 2021
+PID: 10390    Index: 2    Depth: 3    Sum: 2
+
+Time: Wed Feb 24 23:47:39 2021
+PID: 10393    Index: 4    Depth: 3    Sum: 2
+
+Time: Wed Feb 24 23:47:40 2021
+PID: 10395    Index: 6    Depth: 3    Sum: 2
+
+Time: Wed Feb 24 23:47:41 2021
+PID: 10398    Index: 0    Depth: 2    Sum: 4
+
+Time: Wed Feb 24 23:47:42 2021
+PID: 10402    Index: 4    Depth: 2    Sum: 4
+
+Time: Wed Feb 24 23:47:43 2021
+PID: 10403    Index: 0    Depth: 1    Sum: 8
+
+//===Final Sum===//
+Date: Wed Feb 24 23:47:43 2021
+Index: 0  Depth: 0  Sum: 8
+//===== End Log Entry =====//
+
+
+//=======New Logfile Started =======//
+Time: Thu Feb 25 00:20:14 2021
+Max Children: 19  Timer(sec): 100  Datafile: test2
+
+
+Time: Thu Feb 25 00:20:15 2021
+PID: 14007    Index: 2    Depth: 3    Sum: 2
+
+Time: Thu Feb 25 00:20:16 2021
+PID: 14008    Index: 4    Depth: 3    Sum: 2
+
+Time: Thu Feb 25 00:20:17 2021
+PID: 14009    Index: 6    Depth: 3    Sum: 2
+
+Time: Thu Feb 25 00:20:18 2021
+PID: 14006    Index: 0    Depth: 3    Sum: 2
+
+Time: Thu Feb 25 00:20:19 2021
+PID: 14011    Index: 4    Depth: 2    Sum: 4
+
+Time: Thu Feb 25 00:20:20 2021
+PID: 14012    Index: 0    Depth: 1    Sum: 6
+
+Time: Thu Feb 25 00:20:21 2021
+PID: 14010    Index: 0    Depth: 2    Sum: 8
+
+//===Final Sum===//
+Date: Thu Feb 25 00:20:21 2021
+Index: 0  Depth: 0  Sum: 8
+//===== End Log Entry =====//

@@ -37,6 +37,7 @@ static struct itimerval timer; 				//Set Global Timer Struct
 static struct sharedMemory *shmptr; 	//Global Pointer Shared Memory
 static void openLogFile(); 						//Set Filepointer
 static void closeLogFile(); 					//Free File pointer
+static int  min(); 										//Return minimum integer
 
 
 //===Global Variables===//
@@ -61,8 +62,8 @@ bool sigFlag = false; 								//Flag to check if Signal has been called to termi
 int main(int argc, char * argv[]) {
 	
 	//initiate Signal Handling
-	signal(SIGINT, signalHandler); 
-
+	signal(SIGINT, signalHandler);  
+	
 	int c = 0; 
 
 	//Handle Inputs with getopt()
@@ -80,7 +81,7 @@ int main(int argc, char * argv[]) {
 			//Number of Concurrent Child Process Arg
 			case 's': 
 
-				  children = atoi(optarg); 
+				  children = min(children, atoi(optarg));
 				  break;
 			
 			//Set Timer Value 
@@ -610,4 +611,19 @@ static void openLogFile(){
 static void closeLogFile(){
 
 	fclose(filepointer); 
+}
+
+//=== Return Minimum ===//
+
+static int min(int x, int y){
+
+	if( x < y ){
+
+		return x; 
+	}
+	
+	else{
+		
+		return y;
+	}
 }
