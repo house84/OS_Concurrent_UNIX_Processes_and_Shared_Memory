@@ -197,7 +197,20 @@ int main(int argc, char * argv[]) {
 	
 	int summedProc = 0;
 	int level = 1; 
-	//int x = NULL; 
+	int modValue = 0; 
+
+	//Ensure Even Value for algo
+	if( lines%2 != 0 ){
+		
+		modValue = lines+1;
+		totalProc = lines; 
+	
+	}
+	else{
+
+		modValue = lines; 
+	}
+		
 
 	//Set Initial Depth
 	yy = shmptr->depth; 	
@@ -212,7 +225,7 @@ int main(int argc, char * argv[]) {
 			++summedProc;	
 
 			//Call Initial Child Processes **Remove global shmid from call
-			spawn( xx%lines, yy, shmid); 
+			spawn( xx%modValue, yy, shmid); 
 		}
 
 		//Increment xx
@@ -220,7 +233,7 @@ int main(int argc, char * argv[]) {
 
 		//Check if Depth (yy) needs to be decramented
 		//if(( xx % (int)(pow(yy, 2)/2)) == totalProc){
-		if(( xx % lines ) == 0 ){
+		if(( xx % modValue ) == 0 ){
 			
 			//dec yy
 			--yy; 
@@ -247,14 +260,14 @@ int main(int argc, char * argv[]) {
 					++summedProc;
 		
 					//Call Next Child Process
-					spawn( xx%lines, yy, shmid); 
+					spawn( xx%modValue, yy, shmid); 
 				}
 
 				//Increment xx
 				++xx; 
 
 				//Check if depth needs to be decramented
-				if(( xx % lines) == 0 ){
+				if(( xx % modValue) == 0 ){
 
 					//dec yy
 					--yy;

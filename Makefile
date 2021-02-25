@@ -13,4 +13,4 @@ bin_adder.o: bin_adder.c
 	gcc -c bin_adder.c
 
 clean:
-	rm *.o master bin_adder
+	rm *.o master bin_adder logfile

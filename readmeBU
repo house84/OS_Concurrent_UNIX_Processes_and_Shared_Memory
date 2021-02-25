@@ -62,6 +62,7 @@ What this program does:
 		$ make
 
 	2) Create a datafile of random integers if needed
+		
 		$ bash numGen.sh > datafile_name
 
 	3) Execute master.c with user options
@@ -71,6 +72,9 @@ What this program does:
 	4) Logfile will be created if there is not one and append a
 		 logfile that alread exists
 
+	5) Clean up directy
+
+		$ make clean
 
 
 	//===== git Log History =====//
