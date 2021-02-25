@@ -11,7 +11,7 @@ struct sharedMemory {
 	enum state flag[20]; 
 	int turn; 
 	int dataInputs;  
-	int depth;
+	int depth; 
 	int leaves;    
 	int dataArr[];  
 

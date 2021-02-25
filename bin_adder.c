@@ -1,3 +1,10 @@
+/*
+ * Author: Nick House
+ * Projec: Concurrent UNIX Processes and Shared Memory
+ * Course: CS-4760 Operating Systems, Spring 2021
+ * File Name: bin_adder.c
+ */ 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,22 +20,28 @@
 #include <time.h> 
 #include "shared.h"
 
-void process(); 							//Solution 4
-void critical_section();			//Critical Part to avoid race condition 
-void openLogFile(); 					//Open Logfile
-void closeLogFile(); 					//Close Logfile
-struct sharedMemory *shmptr; 	//Global shared memory pointer
-int xx; 											//Child Process Index, will be mod for array addition algo 
-int yy; 											//Depth for array addition algo 
-int indexNum; 								//Index for of flag[] 
-time_t curtime; 							//Initalize Value for Time
-FILE * filepointer; 					//Logfile Pointer
+
+//===Func Prototypes===//
+
+static void process(); 								//Solution 4
+static void critical_section();				//Critical Part to avoid race condition 
+static void openLogFile(); 						//Open Logfile
+static void closeLogFile(); 					//Close Logfile
+static struct sharedMemory *shmptr; 	//Global shared memory pointer
+
+
+//===Global Variables===//
+
+int xx; 															//Child Process Index, will be mod for array addition algo 
+int yy; 															//Depth for array addition algo 
+int indexNum; 												//Index for of flag[] 
+time_t curtime; 											//Initalize Value for Time
+FILE * filepointer; 									//Logfile Pointer
+
+
+//=== main function for child Process bin_adder()===//
 
 int main(int argc, char * argv[], char * envp[]) {
-
-//Testing Output using Fork and execl 
-
-	printf("Child -> %s: %s Time: %s shmid: %s\n", argv[0], argv[1], argv[2], argv[3]);  
 	
 	//Set shmptr from shmid
 	shmptr = (struct sharedMemory *) shmat(atoi(argv[3]), NULL, 0);  
@@ -47,45 +60,39 @@ int main(int argc, char * argv[], char * envp[]) {
 	
 	//release Memory Ptr
 	shmdt(shmptr); 
-	
-	//test
-	fprintf(stderr, "Child Process Exit\n"); 
 
 	return EXIT_SUCCESS;
 }
 
 
 
-
 //===Multi Process Solution 4===//
-void process ( const int i ) {
+
+static void process ( const int i ) {
 
 		int j = NULL; 												//Local to each process
 		int n = 20; 													//Number of Processes
-	
-		fprintf(stderr, "i: %d\n", i); 
+		
+		//Because there may be more operations
+		//than indices in flag check to 
+		//Ensure Index to be assigned is not 
+		//being used by previous Process.
 
-		//Ensure Current Index is not 
-		//being used by previous Process
 		while( shmptr->flag[i] != idle ){
 
 			wait(NULL); 		
 		}	
 	
 		do{
-
-			fprintf(stderr, "In Do, J: %d Turn: %d\n", j, shmptr->turn); 
 	
-			shmptr->flag[i] = want_in; 		//raise my flag
-			j = shmptr->turn; 						//set local variable
+			shmptr->flag[i] = want_in; 					//raise my flag
+			j = shmptr->turn; 									//set local variable
 				
 			while ( j != i ){
 
 				j = ( shmptr->flag[j] != idle ) ? shmptr->turn : ( j + 1 ) % n; 
 
 			}
-
-			fprintf(stderr, "Post while j != i\n"); 
 			
 			//Declare intention to enter critical section
 			shmptr->flag[i] = in_cs; 
@@ -100,19 +107,16 @@ void process ( const int i ) {
 				}
 			}
 			
-		} while (( j < n ) || (( shmptr->turn != i && shmptr->flag[shmptr->turn] != idle ))); 
+		} while (( j < n ) || ( shmptr->turn != i && shmptr->flag[shmptr->turn] != idle )); 
 	 
-		
+
 	//Assign turn to self and enter critical section 
 	shmptr->turn = i; 
+ 
 	
-	//Enter Critical
-	fprintf(stderr, "Enter Critical %d\n", i); 
-	
-	critical_section(); 
+	//Call Critical Section Function
+	critical_section();
 
-	//Exit Section
-	fprintf(stderr, "Exit Critical %d\n", i); 
 
 	//Index to next Array
 	j = ( shmptr->turn + 1 ) % n; 
@@ -122,6 +126,7 @@ void process ( const int i ) {
 		j = ( j + 1 ) % n; 
 	}
 
+	
 	//Assign turn to next waiting process; change flag to idle
 
 	shmptr->turn = j; 
@@ -130,35 +135,63 @@ void process ( const int i ) {
 
 	
 //Execute Algo in Critical Section
-void critical_section(){
 
-	time(&curtime); 
-	
-	printf("CRITICAL SECTION\n"); 
+static void critical_section(){
 
+	//Get value to get index for second value
+	int myExp = shmptr->depth - yy; 
+	int offset = (int)pow(2, myExp); 
+	int secValue = xx + offset; 
 
+	//Local Variable for pid
+	pid_t mypid = getpid(); 
+
+	//Get time
+	time(&curtime);
+
+	//Print Critcal Section Message
+	fprintf(stderr, "Critical Section Entered\nTime: %sPID: %ld\n", ctime(&curtime), mypid); 
+
+	//Open logfile
 	openLogFile(); 
 
-	//Test Logfile Output
-	fprintf(stderr, "Index: %d  Depth: %d  Time: %s  PID: %ld\n", xx, yy, ctime(&curtime), getpid()); 
+	//wait 1 second before writing
+	sleep(1); 
 
-	closeLogFile(); 
+	//===Algo Explanation to Perform Addition of indices===//
+	//
+	//xx = Index of first integer to be summed in dataArr
+	//shmptr->depth = Max Depth of Array when created dynamically
+	//yy = current depth of xx passed to Child from parent
+	//offset is the amount of indices to add to xx to get second index
+	//offset = 2 ^ ( shmptr->depth/yy)
+	//SecValue is the index of the second integer to be summed 
+	//secValue = xx + offset
+	
+	//Set sum to index xx
+	shmptr->dataArr[xx] += shmptr->dataArr[offset];  
+
+	//Get time
+	time(&curtime); 
+
+	//stderr Print to console
+	//fprintf( stderr, "Time: %sPID: %d    Index: %d    Depth: %d    Sum: %d\n", ctime(&curtime), mypid, xx, yy, shmptr->dataArr[xx]); 
+	
+	//Print to logfile
+	fprintf( filepointer, "\nTime: %sPID: %d    Index: %d    Depth: %d    Sum: %d\n", ctime(&curtime), mypid, xx, yy, shmptr->dataArr[xx]); 
+
+	//Close file
+	closeLogFile();
+
+	//Exit Message
+	fprintf(stderr, "Critical Section Exited\nTime: %sPID: %ld\n\n", ctime(&curtime), mypid); 
 
 }
 
-//	int i;   
-//	for(i = 0; i < shmptr->leaves; ++i){
-		
-//		shmptr->dataArr[i] += 1; 
-
-//		printf("[%d] ", shmptr->dataArr[i] ); 
-//	}
-//	printf("\n"); 	
- 
-//}
 
 //Open/Create LogFile
-void openLogFile(){
+
+static void openLogFile(){
 
 	filepointer = fopen("logfile", "a+"); 
 
@@ -171,7 +204,8 @@ void openLogFile(){
 }
 
 //Free File Pointer
-void closeLogFile(){
+
+static void closeLogFile(){
 
 	fclose(filepointer); 
 

@@ -1,3 +1,10 @@
+/* 
+ * Author: Nick House
+ * Project: Concurrent UNIX Processes and Shared Memory
+ * Course: CS-4760 Operating Systems, Spring 2021
+ * File Name: master.c
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,7 +20,11 @@
 #include <math.h> 
 #include <stdbool.h> 
 #include <signal.h>
+#include <time.h>
 #include "shared.h"
+
+
+//===Func Prototypes===//
 
 static void help(); 									//Usage Info
 static void spawn();									//Spawn Children
@@ -24,18 +35,28 @@ static int getTimer();   							//Get Timer
 static void signalHandler(); 					//Signal Handler for termination of program
 static struct itimerval timer; 				//Set Global Timer Struct
 static struct sharedMemory *shmptr; 	//Global Pointer Shared Memory
+static void openLogFile(); 						//Set Filepointer
+static void closeLogFile(); 					//Free File pointer
+
+
+//===Global Variables===//
 
 int lines = 0; 												//Length of Datafile n
-int time = 100; 											//Default Time Out
+int mytimer = 100; 										//Default Time Out
 int children = 20; 										//Default Max amount of Concurrent Children
 int totalProc = 0;										//Set Total Processes as n-1
 int xx = 0; 													//Index Number xx
 int yy = 0; 													//Depth yy
 int pidCount = 0; 										//Track child PID Count
 int shmid = NULL;											//Global shmid
-pid_t  *pidArray; 										//Array for child pid
+pid_t * pidArray; 										//Array for child pid
+FILE * filepointer; 									//Pointer for logfile
+time_t curtime; 											//Initialize variable for current time
 bool flag = false; 										//Flag to check Child Processes and Signal handling
 bool sigFlag = false; 								//Flag to check if Signal has been called to terminate processes 
+
+
+//===Begin main function for master.c===//
 
 int main(int argc, char * argv[]) {
 	
@@ -65,7 +86,7 @@ int main(int argc, char * argv[]) {
 			//Set Timer Value 
 			case 't':
 
-				  time = atoi(optarg);  
+				  mytimer = atoi(optarg);  
 				  break; 
 			
 			//Pass Message When Arg Required
@@ -119,7 +140,7 @@ int main(int argc, char * argv[]) {
 	lines = validateData(argv[file_index]);
 	
 	//==Start Timer===//
-	setTimer(time); 
+	setTimer(mytimer); 
 
 	
 	//===Allocate Shared Memory===//	
@@ -135,8 +156,10 @@ int main(int argc, char * argv[]) {
 
 	//Check for error shmget()
 	if( shmid == -1 ){
+
 		perror("Master: Error: shmget ");
 		exit(EXIT_FAILURE);
+
 	} 
 	
 	//attatch memory segmet with id
@@ -156,84 +179,130 @@ int main(int argc, char * argv[]) {
 	
 	//Allocate Memory for pidArray (Not Needed)
 	pidArray = (int *) malloc(totalProc*sizeof(int));  
+	
+	//=== Open Logfile Entry ===//
+	openLogFile();
 
+	//Get Time
+	time(&curtime);  
+
+	//Initial Logfile Entry
+	fprintf(filepointer, "\n\n//=======New Logfile Started =======//\nTime: %sMax Children: %d  Timer(sec): %d  Datafile: %s\n\n", ctime(&curtime), children, mytimer, argv[file_index]); 
+
+	//Free filepointer
+	closeLogFile(); 
 
 	//=== Spawn Child Processes ===//
 	
 	int summedProc = 0;
 	int level = 1; 
+	//int x = NULL; 
 
 	//Set Initial Depth
 	yy = shmptr->depth; 	
-
+	
 	//Spawn Initial Group of Processes 
-	while( summedProc < children){
+	while( summedProc < children && summedProc < totalProc ){
 
 		//Pass proper index (xx) to child based on level 
 		if( xx % (int)(pow(2, level)) == 0 ){
 		
 			//Total All Proc 
 			++summedProc;	
-		
+
 			//Call Initial Child Processes **Remove global shmid from call
-			spawn( xx, yy, shmid); 
+			spawn( xx%lines, yy, shmid); 
 		}
 
 		//Increment xx
 		++xx; 
 
 		//Check if Depth (yy) needs to be decramented
-		if(( xx % (int)(pow(yy, 2)/2)) == totalProc){
+		//if(( xx % (int)(pow(yy, 2)/2)) == totalProc){
+		if(( xx % lines ) == 0 ){
 			
+			//dec yy
 			--yy; 
+			
+			//iter level
 			++level;
 
 		}
 	}
-	
-	//Spawn Remaining Processes One at a Time Until Finished
-	while( summedProc <= totalProc ){
+	 
 
-			//Wait for One Process to end
-			wait(NULL); 
+	if( summedProc != totalProc){
+
+		//Spawn Remaining Processes One at a Time Until Finished
+		while( summedProc < totalProc ){
+
+				//Wait for One Process to end
+				wait(NULL); 
 		
-			//Check for proper index to pass to child
-			if( xx % (int)(pow(2, level)) == 0 ){
+				//Check for proper index to pass to child
+				if( xx % (int)(pow(2, level)) == 0 ){
 
-				//Increment Count to Next Process
-				++summedProc;
+					//Increment Count to Next Process
+					++summedProc;
 		
-				//Call Next Child Process
-				spawn( xx, yy, shmid); 
+					//Call Next Child Process
+					spawn( xx%lines, yy, shmid); 
+				}
 
-			}
+				//Increment xx
+				++xx; 
 
-			//Increment xx
-			++xx; 
+				//Check if depth needs to be decramented
+				if(( xx % lines) == 0 ){
 
-			//Check if depth needs to be decramented
-			if(( xx % (int)(pow(yy, 2)/2)) == totalProc){
+					//dec yy
+					--yy;
 
-				--yy;
-				++level; 
+					//iter level
+					++level; 
 
-			}
+				}	
+		}
 	}
 
+	//Decrement yy after loop
+	--yy; 
 
-	//=== Allow Processes to Finish ===//
+	//Increment level after loop
+	++level; 
+
+	//Let Child Processes Finish
+	while( wait(NULL) > 0 ) {}
 	
-	//Allow Children to Terminate
-	while( wait(NULL) > 0){ } 
+	//Get Time
+	time(&curtime); 
 
+	//Open logfile
+	openLogFile(); 
+	
+	//Show Final Sum
+	fprintf(filepointer, "\n//===Final Sum===//\nDate: %sIndex: 0  Depth: %d  Sum: %d\n", ctime(&curtime), yy, shmptr->dataArr[0]);
+	fprintf(filepointer, "//===== End Log Entry =====//\n"); 
 
+	//Free file pointer
+	closeLogFile(); 
+
+	
 	//===Detatch Shared Memory===//	
 
 	//Detatch memory 
-	shmdt( shmptr ); 
+	if( shmdt( shmptr )== -1){
+		
+			perror("Master: ERROR: shmdt() failed ");
+			exit(EXIT_FAILURE); 
+	}
 
 	//Destroy shared memory
-	shmctl(shmid, IPC_RMID, NULL);
+	if( shmctl(shmid, IPC_RMID, NULL)== -1){
+			
+			perror("Master: ERROR: shmctl() failed ");
+			exit(EXIT_FAILURE);
+	}
 
 
 	return EXIT_SUCCESS; 
@@ -242,7 +311,7 @@ int main(int argc, char * argv[]) {
 
 //===Usage page -h Option===//
  
-void help(char * program){
+static void help(char * program){
 
 	printf("\n%s Usage Page\n", program);
 	printf("\n%s -h\n", program);
@@ -312,11 +381,11 @@ static void spawn(int x, int y, int myshmid){
 
 //===Set Timer===//
 
-static void setTimer(int mytime) {
+static void setTimer(int myLocalTimer) {
 
 	signal(SIGALRM, signalHandler); 
 	
-	timer.it_value.tv_sec = mytime;
+	timer.it_value.tv_sec = myLocalTimer;
 	timer.it_value.tv_usec = 0; 
 	timer.it_interval.tv_sec = 0; 
  	timer.it_interval.tv_usec = 0; 
@@ -336,11 +405,12 @@ static int getTimer(){
 	
 	int currTime = getitimer(ITIMER_REAL, &timer); 	
 	
-	return time-timer.it_value.tv_sec;
+	return mytimer-timer.it_value.tv_sec;
 }
 
 
 //===Signal Handler===//
+
 static void signalHandler(int sig){
 
 	sigFlag = true; 
@@ -356,21 +426,54 @@ static void signalHandler(int sig){
  	
 	//Allow Current PID to finish
 	while(flag == true){}
-	
-	//Allow child processes to end
-	//while(wait(NULL) > 0); 
 
 	//===Detatch and Delete Shared Memory===//
-	shmdt( shmptr );
-	shmctl(shmid, IPC_RMID, NULL); 
-		
-	//===Kill Child Processes===//
-	int i; 
-	for(i = 0; i < totalProc; ++i){
-	
-		kill(pidArray[i], SIGKILL); 
+	if(shmdt( shmptr )== -1){
+			
+			perror("Master: ERROR: shmptr() failure in Signal Handler ");
+			exit(EXIT_FAILURE); 
 	}
+
+	if(shmctl(shmid, IPC_RMID, NULL) == -1){
+		
+			perror("Master: ERROR: shmctl() failure in Signal Handler ");
+			exit(EXIT_FAILURE); 
+	}
+
 	
+	//open Logfile
+	openLogFile();
+
+	fprintf(filepointer, "\n//===== Program Terminated by User =====//\n");
+
+	if( sig == SIGALRM ){
+
+		fprintf(filepointer, "\nProgram Timer Ran out, Program Terminated\n");
+	
+	}else
+	{
+		fprintf(filepointer, "\nProgram terminated by User with CTRL-C\n");
+	}
+
+	fprintf(filepointer,"\n//=========== End Log Entry ==========//\n"); 
+
+	//Free pointer
+	closeLogFile(); 
+
+	//===Terminate Child Processes===//
+	int i; 
+	for(i = 0; i < totalProc; ++i ){
+
+		if(kill(pidArray[i], SIGKILL ) == -1 && errno != ESRCH ){
+
+			perror("Master: ERROR: Failed to kill processes "); 
+			exit(EXIT_FAILURE); 
+		}
+	}
+
+	//No Zombies
+	while( wait(NULL) != -1 || errno == EINTR); 
+
 	exit(EXIT_SUCCESS); 
 }
 
@@ -485,3 +588,26 @@ static void addData(char * filename ){
 		free(data); 
 	}
 } 
+
+
+//===Set Logfile Pointer===//
+
+static void openLogFile(){
+
+	filepointer = fopen("logfile", "a+"); 
+
+	//Error Check
+	if( filepointer == NULL ){
+
+			perror("Master: Error: Failed to open logfile ");
+			exit(EXIT_FAILURE); 
+	}
+}
+
+
+//===Free logfile Pointer===//
+
+static void closeLogFile(){
+
+	fclose(filepointer); 
+}
