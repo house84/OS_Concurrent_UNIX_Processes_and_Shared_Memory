@@ -97,3 +97,98 @@ What this program does:
 	//===== git Log History =====//
 
 
+commit bb01171fbecdbef9e1c20326ca4105987be4779a
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Thu Feb 25 18:14:19 2021 -0600
+
+    Final Revision
+
+commit cd9f79e960f65271b913716fb5e33d58fa261c45
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Thu Feb 25 00:53:31 2021 -0600
+
+    Final edit again, found and fixed bug, testing good now
+
+commit b0219d3e3fcd989d7b1b3ff24cfd678630b50451
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Thu Feb 25 00:24:28 2021 -0600
+
+    Final Submission, Tested
+
+commit 25ce6ead57313bb04d2d1413055d9155676f0d2b
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Wed Feb 24 23:01:11 2021 -0600
+
+    Finished Major Components and Testing, Need to Finish Readme
+
+commit 3e70f39da592dbd7d07ebcf7ee66c296b7d6ab80
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Wed Feb 24 12:12:29 2021 -0600
+
+    Added Algo to pass to Children
+
+commit e9c85942d08a8e87304f6f1f4888ade161f50ba4
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Tue Feb 23 16:54:39 2021 -0600
+
+    Added Logfile open close, need to write values into it
+
+commit df18f52cdc0707965f463b4558a5133a7fe13d1d
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Tue Feb 23 14:35:49 2021 -0600
+
+    All Processes Look to be working, add math condition to sum values remaining
+
+commit 027a6ae12f5e8d86498ffaf3c9bf61a6811047d5
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Fri Feb 19 23:42:58 2021 -0600
+
+    Added Solution 4, need to fix and implement logfile and algo
+
+commit b83d0f271b4b5aae56da6ac578f739a96faa635b
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Fri Feb 19 19:38:38 2021 -0600
+
+    Update for github
+
+commit e006c8a21b9388ae69876923d2e84b83b5eb5390
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Fri Feb 19 13:28:55 2021 -0600
+
+    Vim is the worst. Testing shared memory and destroying processes.
+
+commit ea73dd984764ae5a6599e46b452d5b06f2d64b46
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Wed Feb 17 14:49:08 2021 -0600
+
+    Fixed and tested execl child process and shared memory location
+
+commit 46a78c24b659d36bb1e8e479a3114e37e249a5da
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Tue Feb 16 17:09:41 2021 -0600
+
+    Created array in shared memory and added data contents, made made shared memory accessible to branch. Need to work on execl() in master.
+
+commit e94ec625d94462e198290be51080ff2e24f6eca9
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Mon Feb 15 18:59:47 2021 -0600
+
+    Added timer, passed time to child process. Fixed open file validation for integers and created shared memory.
+
+commit 53b9cf7f6f134363a5378449cf8598159e7e060e
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Fri Feb 12 23:19:08 2021 -0600
+
+    Created Allocated Memory and Destroy (Not Tested), Basic Fork test to branch
+
+commit 598dec7bd26761614e5f8d20f9ee484b7be5b9f3
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Thu Feb 11 19:43:38 2021 -0600
+
+    Made Makefile, Started master-> getopt-done, usage-done, open file and validation-done
+
+commit 872ca6e310cf30ede7a1bacb93c65ad19f21d6d2
+Author: Nick House <nh6gy@umsystem.edu>
+Date:   Thu Feb 11 09:32:00 2021 -0600
+
+    Initial Commit
