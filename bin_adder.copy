@@ -178,7 +178,7 @@ static void critical_section(){
 	//fprintf( stderr, "Time: %sPID: %d    Index: %d    Depth: %d    Sum: %d\n", ctime(&curtime), mypid, xx, yy, shmptr->dataArr[xx]); 
 	
 	//Print to logfile
-	fprintf( filepointer, "\nTime: %sPID: %d    Index: %d    Depth: %d\n", ctime(&curtime), mypid, xx, yy); 
+	fprintf( filepointer, "\nTime: %sPID: %d    Index: %d    Depth: %d    Sum: %d\n", ctime(&curtime), mypid, xx, yy, shmptr->dataArr[xx]); 
 
 	//Close file
 	closeLogFile();

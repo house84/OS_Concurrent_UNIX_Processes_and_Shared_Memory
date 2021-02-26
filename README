@@ -46,9 +46,8 @@ What this program does:
 		Included in the directory is a Random Number Generator 
 
 			This project includes a Bash file titles "numGen.sh". This file
-		will generate random length [64,100] containing 
-		a single random integer per line in the range [0,256). The integer
-		found on the first line will also be the length of the file. 
+		will generate a file of 64 random integers, one  per line in the 
+		range [0,256). 
 
 		- To generate a random number file using numGen.sh, execute following:
 
@@ -75,6 +74,24 @@ What this program does:
 	5) Clean up directy
 
 		$ make clean
+
+
+	//==== Observations about this Program ====//
+
+	 An observation for using solution 4 to lockout critical memory in my program
+	is that the child processes are created quickly and inserted into a shm flag[]. 
+	Because of how the flag[] is iterated through, the order the child processes
+	are executed by the cpu is not necissarily the same order they where created
+	by the parent process.  This could lead to issues when 2 values are dependent
+	on each other being updated to the same level. There could be times when one
+	value has been summed by a previous process then is called upon again by a 
+	process who has yet to be summed by an equivelant previous process. This 
+	situation could cause it to produce an inccorect result. A couple ways I 
+	thought of to bypass this is by one, limiting processes to 1 or 2 at a time.
+	This should allow the processes to run in incrementing order and help ensure
+	the sums of two indexes are indeed correct. Another would involve adding a
+	another check inside solution 4 to check that the corresponding index that
+	will be used has also been updated before entering the critical section. 
 
 
 	//===== git Log History =====//

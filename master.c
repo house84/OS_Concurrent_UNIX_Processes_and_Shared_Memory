@@ -174,9 +174,6 @@ int main(int argc, char * argv[]) {
 	
 	//Add Data to Array
 	addData(argv[file_index]);	
-
-	//Set total required Processes = n-1
-	totalProc = lines - 1; 
 	
 	//Allocate Memory for pidArray (Not Needed)
 	pidArray = (int *) malloc(totalProc*sizeof(int));  
@@ -187,8 +184,10 @@ int main(int argc, char * argv[]) {
 	//Get Time
 	time(&curtime);  
 
-	//Initial Logfile Entry
-	fprintf(filepointer, "\n\n//=======New Logfile Started =======//\nTime: %sMax Children: %d  Timer(sec): %d  Datafile: %s\n\n", ctime(&curtime), children, mytimer, argv[file_index]); 
+	//Open Logfile Entry
+	fprintf(filepointer, "\n\n//============= New Logfile Started =============//\n");
+	fprintf(filepointer, "Time: %sMax Children: %d  Timer(sec): %d  Datafile: %s\n", ctime(&curtime), children, mytimer, argv[file_index]); 
+	fprintf(filepointer, "//==============================================//\n"); 
 
 	//Free filepointer
 	closeLogFile(); 
@@ -199,18 +198,10 @@ int main(int argc, char * argv[]) {
 	int level = 1; 
 	int modValue = 0; 
 
-	//Ensure Even Value for algo
-	if( lines%2 != 0 ){
-		
-		modValue = lines+1;
-		totalProc = lines; 
-	
-	}
-	else{
+	//Set Loop Logic Parameters
+	modValue = shmptr->leaves; 
+	totalProc = shmptr->leaves;  
 
-		modValue = lines; 
-	}
-		
 
 	//Set Initial Depth
 	yy = shmptr->depth; 	
@@ -225,13 +216,12 @@ int main(int argc, char * argv[]) {
 			++summedProc;	
 
 			//Call Initial Child Processes **Remove global shmid from call
-			spawn( xx%modValue, yy, shmid); 
+			spawn( xx, yy, shmid); 
 		}
 
 		//Increment xx
 		++xx; 
 
-		//Check if Depth (yy) needs to be decramented
 		//if(( xx % (int)(pow(yy, 2)/2)) == totalProc){
 		if(( xx % modValue ) == 0 ){
 			
@@ -241,66 +231,67 @@ int main(int argc, char * argv[]) {
 			//iter level
 			++level;
 
+			//added for testing
+			xx = 0; 
+
 		}
 	}
 	 
 
-	if( summedProc != totalProc){
 
-		//Spawn Remaining Processes One at a Time Until Finished
-		while( summedProc < totalProc ){
+	//Spawn Remaining Processes One at a Time Until Finished
+	while( summedProc < totalProc ){ // && level <= shmptr->depth ){
 
-				//Wait for One Process to end
-				wait(NULL); 
+			//Wait for One Process to end
+			wait(NULL); 
 		
-				//Check for proper index to pass to child
-				if( xx % (int)(pow(2, level)) == 0 ){
+			//Check for proper index to pass to child
+			if( xx % (int)(pow(2, level)) == 0 ){
 
-					//Increment Count to Next Process
-					++summedProc;
+				//Increment Count to Next Process
+				++summedProc;
 		
-					//Call Next Child Process
-					spawn( xx%modValue, yy, shmid); 
-				}
+				//Call Next Child Process
+				spawn( xx, yy, shmid); 
+					 
+			}
 
-				//Increment xx
-				++xx; 
+			//Increment xx
+			++xx; 
 
-				//Check if depth needs to be decramented
-				if(( xx % modValue) == 0 ){
+			//Check if depth needs to be decramented
+			if(( xx % modValue ) == 0 ){
 
-					//dec yy
-					--yy;
+				//dec yy
+				--yy;
 
-					//iter level
-					++level; 
+				//iter level
+				++level; 
+			
+				//Added for testing
+				xx = 0; 
 
-				}	
-		}
+		}	
 	}
 
-	//Decrement yy after loop
-	--yy; 
-
-	//Increment level after loop
-	++level; 
-
-	//Let Child Processes Finish
-	while( wait(NULL) > 0 ) {}
 	
 	//Get Time
-	time(&curtime); 
-
-	//Open logfile
-	openLogFile(); 
+	time(&curtime);  	
 	
-	//Show Final Sum
-	fprintf(filepointer, "\n//===Final Sum===//\nDate: %sIndex: 0  Depth: %d  Sum: %d\n", ctime(&curtime), yy, shmptr->dataArr[0]);
-	fprintf(filepointer, "//===== End Log Entry =====//\n"); 
+	//Open fileptr
+	openLogFile(); 
 
-	//Free file pointer
-	closeLogFile(); 
+	//Write Log Exit	
+	fprintf(filepointer, "\n//===============  End Log Entry ===============//\n"); 	
+	fprintf(filepointer, "Time: %s", ctime(&curtime)); 
 
+	
+	//Let Child Processes Finish
+	while( wait(NULL) > 0 ) {}
+
+	//Update Log
+	fprintf(filepointer, "All Child Processes have finished\n"); 
+	
 	
 	//===Detatch Shared Memory===//	
 
@@ -311,6 +302,10 @@ int main(int argc, char * argv[]) {
 			exit(EXIT_FAILURE); 
 	}
 
+	//Update Log
+	fprintf(filepointer, "Shared Memory Pointer has been freed\n"); 
+
+
 	//Destroy shared memory
 	if( shmctl(shmid, IPC_RMID, NULL)== -1){
 			
@@ -318,7 +313,15 @@ int main(int argc, char * argv[]) {
 			exit(EXIT_FAILURE);
 	}
 
+	//Update Log
+	fprintf(filepointer, "Shared Memory has been destroyed\n"); 
 
+	fprintf(filepointer, "File has successfully completed\n"); 
+	fprintf(filepointer, "//==============================================//\n\n"); 
+
+	//Close filepointer
+	closeLogFile(); 
+	
 	return EXIT_SUCCESS; 
 }
 
@@ -458,21 +461,25 @@ static void signalHandler(int sig){
 	//open Logfile
 	openLogFile();
 
-	fprintf(filepointer, "\n//===== Program Terminated by User =====//\n");
+	time(&curtime); 
+
+	fprintf(filepointer, "\n//========= Program Terminated by User =========//\n");
+	fprintf(filepointer, "Time: %s", ctime(&curtime)); 
 
 	if( sig == SIGALRM ){
 
-		fprintf(filepointer, "\nProgram Timer Ran out, Program Terminated\n");
+		fprintf(filepointer, "Program Timer Ran out, Program Terminated\n");
 	
 	}else
 	{
-		fprintf(filepointer, "\nProgram terminated by User with CTRL-C\n");
+		fprintf(filepointer, "Program terminated by User with CTRL-C\n");
 	}
 
-	fprintf(filepointer,"\n//=========== End Log Entry ==========//\n"); 
-
+	fprintf(filepointer,"//================ End Log Entry ===============//\n\n"); 
+	
 	//Free pointer
 	closeLogFile(); 
+
 
 	//===Terminate Child Processes===//
 	int i; 
@@ -486,8 +493,8 @@ static void signalHandler(int sig){
 	}
 
 	//No Zombies
-	while( wait(NULL) != -1 || errno == EINTR); 
-
+	while( wait(NULL) != -1 || errno == EINTR); 	
+	
 	exit(EXIT_SUCCESS); 
 }
 
@@ -559,6 +566,13 @@ static void addData(char * filename ){
 	shmptr->leaves = pow(2, shmptr->depth);  
 	
 	int arrLength = shmptr->leaves+1;
+
+	int i; 
+	//Initialize array to 0's
+	for( i = 0; i < shmptr->leaves+1 ; ++i ){
+
+		shmptr->dataArr[i] = 0; 
+	}
 
 	//===Add Validated file to Memory===// 
 	

@@ -1,8 +1,6 @@
 #!/bin/bash
 
-y=$(($RANDOM % 37 + 63))
-
-echo $((y+1))
+y=64
 
 for(( i=0; $i<$y; ++i))
 do
